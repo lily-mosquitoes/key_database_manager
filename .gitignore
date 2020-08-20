@@ -4,6 +4,11 @@ __pycache__/
 # pyqt5 files
 *.ui
 
+# packaging files
+build/
+dist/
+*.spec
+
 # my files
 trash/
 *.sh

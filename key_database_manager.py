@@ -4,6 +4,7 @@ from PyQt5 import QtWidgets, uic, QtGui
 from ui_files.main_window import Ui_MainWindow
 from models.model_dataset import ModelDataset
 
+
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, user, host, passwd, *args, obj=None, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
