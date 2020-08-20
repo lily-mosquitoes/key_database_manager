@@ -1,0 +1,13 @@
+# interpreter files
+__pycache__/
+
+# pyqt5 files
+*.ui
+
+# my files
+trash/
+*.sh
+*.jar
+
+# private files
+conf/conf
