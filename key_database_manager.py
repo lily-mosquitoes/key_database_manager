@@ -5,11 +5,11 @@ from ui_files.main_window import Ui_MainWindow
 from models.model_dataset import ModelDataset
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
-    def __init__(self, user, passwd, *args, obj=None, **kwargs):
+    def __init__(self, user, host, passwd, *args, obj=None, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
         self.setupUi(self)
         # database connection
-        self.db = ModelDataset(user, passwd)
+        self.db = ModelDataset(user, host, passwd)
         self.db_species = self.db.list_species()
         self.db_couplets = self.db.list_couplets()
         #
@@ -90,15 +90,16 @@ def read_conf():
     config = configparser.ConfigParser()
     config.read('conf/conf')
     user = config['mosquito database']['User']
+    host = config['mosquito database']['Host']
     passwd = config['mosquito database']['Password']
-    return user, passwd
+    return user, host, passwd
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
     #
-    user, passwd = read_conf()
+    user, host, passwd = read_conf()
     #
-    main = MainWindow(user, passwd)
+    main = MainWindow(user, host, passwd)
     main.show()
     sys.exit(app.exec_())
 

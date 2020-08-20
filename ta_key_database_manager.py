@@ -6,8 +6,8 @@ from models.model_dataset import ModelDataset
 
 
 class Database(object):
-    def __init__(self, user, passwd):
-        self.db = ModelDataset(user, passwd)
+    def __init__(self, user, host, passwd):
+        self.db = ModelDataset(user, host, passwd)
         self.db_species = self.db.list_species()
         self.db_couplets = self.db.list_couplets()
         #
@@ -55,6 +55,7 @@ def read_conf():
     config = configparser.ConfigParser()
     config.read('conf/conf')
     user = config['mosquito database']['User']
+    host = config['mosquito database']['Host']
     passwd = config['mosquito database']['Password']
     keybindings = {
         'NextCouplet': read_key(config['ta keybindings']['NextCouplet']) or 's',
@@ -66,7 +67,7 @@ def read_conf():
         'Quit': read_key(config['ta keybindings']['Quit'] or 'q')
     }
 
-    return user, passwd, keybindings
+    return user, host, passwd, keybindings
 
 def main(term):
     #
@@ -81,9 +82,9 @@ def main(term):
     term.clear()
     #
     # reading config:
-    user, passwd, keybindings = read_conf()
+    user, host, passwd, keybindings = read_conf()
     #
-    db = Database(user, passwd)
+    db = Database(user, host, passwd)
     #
     while True:
         term.clear()

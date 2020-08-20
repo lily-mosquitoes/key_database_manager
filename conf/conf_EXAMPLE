@@ -2,6 +2,7 @@
 
 [mosquito database]
 User = #user goes here
+Host = #host goes here
 Password = #password goes here
 
 [ta keybindings]
