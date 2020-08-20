@@ -1,0 +1,25 @@
+### obs: rename this file as 'conf'
+
+[mosquito database]
+User = #user goes here
+Password = #password goes here
+
+[ta keybindings]
+NextCouplet = s
+PreviousCouplet = a
+NextSpecies = x
+PreviousSpecies = z
+Update = KEY_ENTER
+Cancel = c
+Quit = q
+
+### obs: only single character keys are possible
+### possible keys:
+# any alphanumeric character (eg. a b 3 7)
+# any single stroke symbol (eg. - + / = )
+# KEY_DOWN
+# KEY_UP
+# KEY_LEFT
+# KEY_RIGHT
+# KEY_BACKSPACE
+# KEY_ENTER
