@@ -86,6 +86,10 @@ def main(term):
     #
     db = Database(user, host, passwd)
     #
+    # init color pairs
+    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
+    #
     while True:
         term.clear()
         #
@@ -130,16 +134,16 @@ def main(term):
             new_status = term.getstr().decode('utf-8').upper()
             curses.noecho()
             if new_status in ['0', '1', '01', '10', 'NA']:
-                term.addstr(y+1, x, 'new status: {}'.format(new_status))
+                term.addstr(y+1, x, 'new status: {}'.format(new_status), curses.A_BOLD)
                 term.addstr(y+2, x, "press any key to confirm, 'c' to cancel")
                 confirm = term.getch()
                 if confirm == keybindings['Cancel']:
-                    term.addstr(y+3, x, 'action cancelled, press any key to continue')
+                    term.addstr(y+3, x, 'action cancelled, press any key to continue', curses.color_pair(3))
                 else:
                     db.db.update(species, new_status, couplet)
-                    term.addstr(y+3, x, 'change confirmed, press any key to continue')
+                    term.addstr(y+3, x, 'change confirmed, press any key to continue', curses.color_pair(2))
             else:
-                term.addstr(y+1, x, 'illegal status: {}'.format(new_status))
+                term.addstr(y+1, x, 'illegal status: {}'.format(new_status), curses.color_pair(3))
                 term.addstr(y+2, x, "please type '0', '1', '01' or 'NA'")
             term.getch()
         elif key == keybindings['Quit']:
