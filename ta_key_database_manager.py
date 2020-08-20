@@ -57,14 +57,23 @@ def read_conf():
     user = config['mosquito database']['User']
     host = config['mosquito database']['Host']
     passwd = config['mosquito database']['Password']
+    #
+    # aliasing
+    nc = config['ta keybindings']['NextCouplet']
+    pc = config['ta keybindings']['PreviousCouplet']
+    ns = config['ta keybindings']['NextSpecies']
+    ps = config['ta keybindings']['PreviousSpecies']
+    u = config['ta keybindings']['Update']
+    c = config['ta keybindings']['Cancel']
+    q = config['ta keybindings']['Quit']
     keybindings = {
-        'NextCouplet': read_key(config['ta keybindings']['NextCouplet']) or 's',
-        'PreviousCouplet': read_key(config['ta keybindings']['PreviousCouplet']) or 'a',
-        'NextSpecies': read_key(config['ta keybindings']['NextSpecies']) or 'x',
-        'PreviousSpecies': read_key(config['ta keybindings']['PreviousSpecies']) or 'z',
-        'Update': read_key(config['ta keybindings']['Update']) or '\n',
-        'Cancel': read_key(config['ta keybindings']['Cancel']) or 'c',
-        'Quit': read_key(config['ta keybindings']['Quit'] or 'q')
+        'NextCouplet': (read_key(nc) or 's', nc),
+        'PreviousCouplet': (read_key(pc) or 'a', pc),
+        'NextSpecies': (read_key(ns) or 'x', ns),
+        'PreviousSpecies': (read_key(ps) or 'z', ps),
+        'Update': (read_key(u) or '\n', u),
+        'Cancel': (read_key(c) or 'c', c),
+        'Quit': (read_key(q) or 'q', q)
     }
 
     return user, host, passwd, keybindings
@@ -87,6 +96,13 @@ def main(term):
     #
     # reading config:
     user, host, passwd, keybindings = read_conf()
+    NEXT_C = keybindings['NextCouplet']
+    PREV_C = keybindings['PreviousCouplet']
+    NEXT_S = keybindings['NextSpecies']
+    PREV_S = keybindings['PreviousSpecies']
+    UPDATE = keybindings['Update']
+    CANCEL = keybindings['Cancel']
+    QUIT = keybindings['Quit']
     #
     try:
         db = Database(user, host, passwd)
@@ -127,30 +143,37 @@ def main(term):
         term.refresh()
         y, x = term.getyx()
         #
+        # display helper text
+        term.addstr(y+4, x, """
+        keybindings:
+        ({}) previous couplet  ({}) next couplet      ({}) update
+        ({}) previous species  ({}) next species      ({}) quit
+        """.format(PREV_C[1], NEXT_C[1], UPDATE[1], PREV_S[1], NEXT_S[1], QUIT[1]), curses.A_DIM)
+        #
         key = term.getch()
         #
-        if key == keybindings['NextCouplet']:
+        if key == NEXT_C[0]:
             if db.cp_index < len(db.select_couplets):
                 db.cp_index += 1
-        elif key == keybindings['PreviousCouplet']:
+        elif key == PREV_C[0]:
             if db.cp_index > 0:
                 db.cp_index -= 1
-        elif key == keybindings['NextSpecies']:
+        elif key == NEXT_S[0]:
             if db.sp_index < len(db.select_species):
                 db.sp_index += 1
-        elif key == keybindings['PreviousSpecies']:
+        elif key == PREV_S[0]:
             if db.sp_index > 0:
                 db.sp_index -= 1
-        elif key == keybindings['Update']:
+        elif key == UPDATE[0]:
             term.addstr(y, x, 'type a new value to edit the database: ')
             curses.echo()
             new_status = term.getstr().decode('utf-8').upper()
             curses.noecho()
             if new_status in ['0', '1', '01', '10', 'NA']:
                 term.addstr(y+1, x, 'new status: {}'.format(new_status), curses.A_BOLD)
-                term.addstr(y+2, x, "press any key to confirm, 'c' to cancel")
+                term.addstr(y+2, x, "press any key to confirm, '{}' to cancel".format(CANCEL[1]))
                 confirm = term.getch()
-                if confirm == keybindings['Cancel']:
+                if confirm == CANCEL[0]:
                     term.addstr(y+3, x, 'action cancelled, press any key to continue', curses.color_pair(3))
                 else:
                     db.db.update(species, new_status, couplet)
@@ -159,7 +182,7 @@ def main(term):
                 term.addstr(y+1, x, 'illegal status: {}'.format(new_status), curses.color_pair(3))
                 term.addstr(y+2, x, "please type '0', '1', '01' or 'NA'")
             term.getch()
-        elif key == keybindings['Quit']:
+        elif key == QUIT[0]:
             break
 
     db.db.connection.close()
