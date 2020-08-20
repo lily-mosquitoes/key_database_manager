@@ -81,14 +81,27 @@ def main(term):
     #
     term.clear()
     #
-    # reading config:
-    user, host, passwd, keybindings = read_conf()
-    #
-    db = Database(user, host, passwd)
-    #
     # init color pairs
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
+    #
+    # reading config:
+    user, host, passwd, keybindings = read_conf()
+    #
+    try:
+        db = Database(user, host, passwd)
+    except Exception as e:
+        term.addstr("""
+        connection failed with following error:
+
+        """, curses.A_BOLD)
+        y, x = term.getyx()
+        term.addstr(y, x, 'err code: {}'.format(e.args[0]), curses.color_pair(3))
+        term.addstr(y+1, x, 'err msg.: {}'.format(e.args[1]), curses.color_pair(3))
+        term.addstr(y+3, x, 'contact your database admin')
+        term.addstr(y+4, x, 'press any key to exit')
+        term.getch()
+        return
     #
     while True:
         term.clear()

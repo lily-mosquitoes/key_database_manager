@@ -97,11 +97,18 @@ def read_conf():
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
+    error_dialog = QtWidgets.QMessageBox()
+    error_dialog.setIcon(QtWidgets.QMessageBox.Critical)
     #
     user, host, passwd = read_conf()
     #
-    main = MainWindow(user, host, passwd)
-    main.show()
+    try:
+        main = MainWindow(user, host, passwd)
+        main.show()
+    except Exception as e:
+        error_dialog.setText('connection failed with following error:\n\nerr code: {}\nerr msg.: {}\n\ncontact your database admin'.format(e.args[0], e.args[1]))
+        sys.exit(error_dialog.exec_())
+    #
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
