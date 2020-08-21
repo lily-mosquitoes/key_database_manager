@@ -11,7 +11,7 @@ PreviousCouplet = a
 NextSpecies = x
 PreviousSpecies = z
 Update = KEY_ENTER
-Cancel = c
+Confirm = c
 Quit = q
 
 ### obs: only single character keys are possible

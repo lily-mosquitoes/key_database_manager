@@ -65,7 +65,7 @@ def read_conf():
     ns = config['ta keybindings']['NextSpecies']
     ps = config['ta keybindings']['PreviousSpecies']
     u = config['ta keybindings']['Update']
-    c = config['ta keybindings']['Cancel']
+    c = config['ta keybindings']['Confirm']
     q = config['ta keybindings']['Quit']
     keybindings = {
         'NextCouplet': (read_key(nc) or 's', nc),
@@ -73,7 +73,7 @@ def read_conf():
         'NextSpecies': (read_key(ns) or 'x', ns),
         'PreviousSpecies': (read_key(ps) or 'z', ps),
         'Update': (read_key(u) or '\n', u),
-        'Cancel': (read_key(c) or 'c', c),
+        'Confirm': (read_key(c) or 'c', c),
         'Quit': (read_key(q) or 'q', q)
     }
 
@@ -115,7 +115,7 @@ def main(term):
     NEXT_S = keybindings['NextSpecies']
     PREV_S = keybindings['PreviousSpecies']
     UPDATE = keybindings['Update']
-    CANCEL = keybindings['Cancel']
+    CONFIRM = keybindings['Confirm']
     QUIT = keybindings['Quit']
     #
     # define tabspace (min of x)
@@ -184,13 +184,13 @@ def main(term):
                 new_status = None
             if new_status in ['0', '1', '01', '10', 'NA', None]:
                 y, x = wrapstr(term, y+1, tab, 'new status: {}'.format(new_status), curses.A_BOLD)
-                y, x = wrapstr(term, y+1, tab, "press any key to confirm, '{}' to cancel".format(CANCEL[1]))
+                y, x = wrapstr(term, y+1, tab, "press '{}' to confirm, or any key to cancel".format(CONFIRM[1]))
                 confirm = term.getch()
-                if confirm == CANCEL[0]:
-                    y, x = wrapstr(term, y+1, tab, 'action cancelled, press any key to continue', curses.color_pair(3))
-                else:
+                if confirm == CONFIRM[0]:
                     db.db.update(species, new_status, couplet)
                     y, x = wrapstr(term, y+1, tab, 'change confirmed, press any key to continue', curses.color_pair(2))
+                else:
+                    y, x = wrapstr(term, y+1, tab, 'action cancelled, press any key to continue', curses.color_pair(3))
             else:
                 y, x = wrapstr(term, y+1, tab, 'illegal status: {}'.format(new_status), curses.color_pair(3))
                 y, x = wrapstr(term, y+1, tab, "please type '0', '1', '01' or 'NA'")
