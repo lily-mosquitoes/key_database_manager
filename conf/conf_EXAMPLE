@@ -14,7 +14,7 @@ Update = KEY_ENTER
 Confirm = c
 Quit = q
 
-### obs: only single character keys are possible
+### obs: only single stroke character keys are possible
 ### possible keys:
 # any alphanumeric character (eg. a b 3 7)
 # any single stroke symbol (eg. - + / = )
