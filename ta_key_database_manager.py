@@ -95,6 +95,7 @@ def wrapstr(term, y, x, text, format=0):
     return term.getyx()
 
 def connection_error_handler(term, e):
+    tab = 8
     while True:
         term.clear()
         y, x = wrapstr(term, 2, tab, 'connection failed with following error:', curses.A_BOLD)
@@ -118,7 +119,7 @@ def main(term):
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
     #
-    # reading config:
+    # reading config
     user, host, passwd, keybindings = read_conf()
     NEXT_C = keybindings['NextCouplet']
     PREV_C = keybindings['PreviousCouplet']
@@ -144,10 +145,13 @@ def main(term):
         term.clear()
         #
         # read db info
-        couplet = db.select_couplets[db.cp_index]
-        zero_text, one_text = db.db.show_couplet(couplet)
-        species = db.select_species[db.sp_index]
-        status = db.db.show_state(species, couplet)
+        try: # try to query the data
+            couplet = db.select_couplets[db.cp_index]
+            zero_text, one_text = db.db.show_couplet(couplet)
+            species = db.select_species[db.sp_index]
+            status = db.db.show_state(species, couplet)
+        except Exception as e:
+            connection_error_handler(term, e)
         #
         # display db info
         y, x = wrapstr(term, 2, tab, 'current couplet: {}'.format(couplet))
@@ -193,8 +197,11 @@ def main(term):
                 y, x = wrapstr(term, y+1, tab, "press '{}' to confirm, or any key to cancel".format(CONFIRM[1]))
                 confirm = term.getch()
                 if confirm == CONFIRM[0]:
-                    db.db.update(species, new_status, couplet)
-                    y, x = wrapstr(term, y+1, tab, 'change confirmed, press any key to continue', curses.color_pair(2))
+                    try: # try to perform an update:
+                        db.db.update(species, new_status, couplet)
+                        y, x = wrapstr(term, y+1, tab, 'change confirmed, press any key to continue', curses.color_pair(2))
+                    except Exception as e:
+                        connection_error_handler(term, e)
                 else:
                     y, x = wrapstr(term, y+1, tab, 'action cancelled, press any key to continue', curses.color_pair(3))
             else:
@@ -206,7 +213,10 @@ def main(term):
         elif key == curses.KEY_RESIZE:
             pass # this deals with resizing the terminal window
     #
-    db.db.connection.close()
+    try: # try to close the connection nicely
+        db.db.connection.close()
+    except Exception as e:
+        connection_error_handler(term, e)
 
 
 if __name__ == '__main__':
