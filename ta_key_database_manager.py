@@ -2,6 +2,7 @@ import curses
 import signal
 import sys
 import configparser
+import textwrap
 from models.model_dataset import ModelDataset
 
 
@@ -78,6 +79,17 @@ def read_conf():
 
     return user, host, passwd, keybindings
 
+def wrapstr(term, y, x, text, format=0):
+    lines, cols = term.getmaxyx()
+    wrapped = textwrap.wrap(text, cols-1-x)
+    if y + len(wrapped) < lines-1:
+        for line in wrapped:
+            term.addstr(y, x, line, format)
+            y += 1
+    else:
+        pass
+    return term.getyx()
+
 def main(term):
     #
     def signal_handler(sig, frame):
@@ -85,8 +97,10 @@ def main(term):
         print('You pressed Ctrl+C!')
         db.db.connection.close()
         sys.exit(0)
-
+    #
     signal.signal(signal.SIGINT, signal_handler)
+    #
+    curses.curs_set(0)
     #
     term.clear()
     #
@@ -104,20 +118,24 @@ def main(term):
     CANCEL = keybindings['Cancel']
     QUIT = keybindings['Quit']
     #
+    # define tabspace (min of x)
+    tab = 8
+    #
     try:
         db = Database(user, host, passwd)
     except Exception as e:
-        term.addstr("""
-        connection failed with following error:
-
-        """, curses.A_BOLD)
-        y, x = term.getyx()
-        term.addstr(y, x, 'err code: {}'.format(e.args[0]), curses.color_pair(3))
-        term.addstr(y+1, x, 'err msg.: {}'.format(e.args[1]), curses.color_pair(3))
-        term.addstr(y+3, x, 'contact your database admin')
-        term.addstr(y+4, x, 'press any key to exit')
-        term.getch()
-        return
+        while True:
+            term.clear()
+            y, x = wrapstr(term, 2, tab, 'connection failed with following error:', curses.A_BOLD)
+            y, x = wrapstr(term, y+2, tab, 'err code: {}'.format(e.args[0]), curses.color_pair(3))
+            y, x = wrapstr(term, y+1, tab, 'err msg.: {}'.format(e.args[1]), curses.color_pair(3))
+            y, x = wrapstr(term, y+2, tab, 'contact your database admin')
+            y, x = wrapstr(term, y+1, tab, 'press any key to exit')
+            key = term.getch()
+            if key == curses.KEY_RESIZE:
+                continue
+            else:
+                return
     #
     while True:
         term.clear()
@@ -127,28 +145,19 @@ def main(term):
         species = db.select_species[db.sp_index]
         status = db.db.show_state(species, couplet)
         #
-        term.addstr("""
-        current couplet: {}
-
-            0. {}
-
-            1. {}
-
-
-        current species: {}
-
-            status: {}
-
-        """.format(couplet, zero_text, one_text, species, status))
-        term.refresh()
-        y, x = term.getyx()
+        y, x = wrapstr(term, 2, tab, 'current couplet: {}'.format(couplet))
+        y, x = wrapstr(term, y+2, tab+4, '0. {}'.format(zero_text))
+        y, x = wrapstr(term, y+2, tab+4, '1. {}'.format(one_text))
+        y, x = wrapstr(term, y+2, tab, 'current species: {}'.format(species))
+        y, x = wrapstr(term, y+2, tab+4, 'status: {}'.format(status))
+        #
+        # freeze input y pos
+        input_y = y+2
         #
         # display helper text
-        term.addstr(y+4, x, """
-        keybindings:
-        ({}) previous couplet  ({}) next couplet      ({}) update
-        ({}) previous species  ({}) next species      ({}) quit
-        """.format(PREV_C[1], NEXT_C[1], UPDATE[1], PREV_S[1], NEXT_S[1], QUIT[1]), curses.A_DIM)
+        y, x = wrapstr(term, y+7, tab, 'keybindings:', curses.A_DIM)
+        y, x = wrapstr(term, y+1, tab, '({}) previous couplet  ({}) next couplet      ({}) update'.format(PREV_C[1], NEXT_C[1], UPDATE[1]), curses.A_DIM)
+        y, x = wrapstr(term, y+1, tab, '({}) previous species  ({}) next species      ({}) quit'.format(PREV_S[1], NEXT_S[1], QUIT[1]), curses.A_DIM)
         #
         key = term.getch()
         #
@@ -165,25 +174,31 @@ def main(term):
             if db.sp_index > 0:
                 db.sp_index -= 1
         elif key == UPDATE[0]:
-            term.addstr(y, x, 'type a new value to edit the database: ')
+            y, x = wrapstr(term, input_y, tab, 'type a new value to edit the database:   ')
+            curses.curs_set(1)
             curses.echo()
-            new_status = term.getstr().decode('utf-8').upper()
+            new_status = term.getstr(y, x+1).decode('utf-8').upper()
             curses.noecho()
-            if new_status in ['0', '1', '01', '10', 'NA']:
-                term.addstr(y+1, x, 'new status: {}'.format(new_status), curses.A_BOLD)
-                term.addstr(y+2, x, "press any key to confirm, '{}' to cancel".format(CANCEL[1]))
+            curses.curs_set(0)
+            if new_status.upper() == 'NULL_VALUE':
+                new_status = None
+            if new_status in ['0', '1', '01', '10', 'NA', None]:
+                y, x = wrapstr(term, y+1, tab, 'new status: {}'.format(new_status), curses.A_BOLD)
+                y, x = wrapstr(term, y+1, tab, "press any key to confirm, '{}' to cancel".format(CANCEL[1]))
                 confirm = term.getch()
                 if confirm == CANCEL[0]:
-                    term.addstr(y+3, x, 'action cancelled, press any key to continue', curses.color_pair(3))
+                    y, x = wrapstr(term, y+1, tab, 'action cancelled, press any key to continue', curses.color_pair(3))
                 else:
                     db.db.update(species, new_status, couplet)
-                    term.addstr(y+3, x, 'change confirmed, press any key to continue', curses.color_pair(2))
+                    y, x = wrapstr(term, y+1, tab, 'change confirmed, press any key to continue', curses.color_pair(2))
             else:
-                term.addstr(y+1, x, 'illegal status: {}'.format(new_status), curses.color_pair(3))
-                term.addstr(y+2, x, "please type '0', '1', '01' or 'NA'")
+                y, x = wrapstr(term, y+1, tab, 'illegal status: {}, type({})'.format(new_status, type(new_status)), curses.color_pair(3))
+                y, x = wrapstr(term, y+1, tab, "please type '0', '1', '01' or 'NA'")
             term.getch()
         elif key == QUIT[0]:
             break
+        elif key == curses.KEY_RESIZE:
+            pass
 
     db.db.connection.close()
 
