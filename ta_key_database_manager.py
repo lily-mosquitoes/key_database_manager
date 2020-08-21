@@ -192,7 +192,7 @@ def main(term):
                     db.db.update(species, new_status, couplet)
                     y, x = wrapstr(term, y+1, tab, 'change confirmed, press any key to continue', curses.color_pair(2))
             else:
-                y, x = wrapstr(term, y+1, tab, 'illegal status: {}, type({})'.format(new_status, type(new_status)), curses.color_pair(3))
+                y, x = wrapstr(term, y+1, tab, 'illegal status: {}'.format(new_status), curses.color_pair(3))
                 y, x = wrapstr(term, y+1, tab, "please type '0', '1', '01' or 'NA'")
             term.getch()
         elif key == QUIT[0]:
