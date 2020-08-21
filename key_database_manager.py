@@ -20,9 +20,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.UiComponents()
 
     def closeEvent(self, event):
-        self.db.connection.close()
+        try:
+            self.db.connection.close()
+        except Exception as e:
+            connection_error_handler(e)
         event.accept()
-
 
     def UiComponents(self):
         self.comboBox_couplet.addItems(self.select_couplets)
@@ -56,8 +58,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.c_couplet = str(self.comboBox_couplet.currentText())
         self.c_species = str(self.comboBox_species.currentText())
         #
-        zero_text, one_text = self.db.show_couplet(self.c_couplet)
-        state = self.db.show_state(self.c_species, self.c_couplet)
+        try:
+            zero_text, one_text = self.db.show_couplet(self.c_couplet)
+            state = self.db.show_state(self.c_species, self.c_couplet)
+        except Exception as e:
+            connection_error_handler(e)
         #
         self.label_couplet.setText('Current couplet: {}'.format(self.c_couplet))
         self.label_zero.setText(zero_text)
@@ -78,12 +83,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.onJumpPress()
 
     def onChange(self):
-        # UPDATE db
-        new_state = str(self.comboBox_status.currentText())
-        self.db.update(self.c_species, new_state, self.c_couplet)
-        # confirm UPDATE
-        state = self.db.show_state(self.c_species, self.c_couplet)
-        self.label_status.setText('Current status: {}'.format(state or 'NULL'))
+        try:
+            # UPDATE db
+            new_state = str(self.comboBox_status.currentText())
+            self.db.update(self.c_species, new_state, self.c_couplet)
+            # confirm UPDATE
+            state = self.db.show_state(self.c_species, self.c_couplet)
+            self.label_status.setText('Current status: {}'.format(state or 'NULL'))
+        except Exception as e:
+            connection_error_handler(e)
 
 
 ###
@@ -95,10 +103,14 @@ def read_conf():
     passwd = config['mosquito database']['Password']
     return user, host, passwd
 
-def main():
-    app = QtWidgets.QApplication(sys.argv)
+def connection_error_handler(e):
     error_dialog = QtWidgets.QMessageBox()
     error_dialog.setIcon(QtWidgets.QMessageBox.Critical)
+    error_dialog.setText('connection failed with following error:\n\nerr code: {}\nerr msg.: {}\n\ncontact your database admin'.format(e.args[0], e.args[1]))
+    sys.exit(error_dialog.exec_())
+
+def main():
+    app = QtWidgets.QApplication(sys.argv)
     #
     user, host, passwd = read_conf()
     #
@@ -106,8 +118,7 @@ def main():
         main = MainWindow(user, host, passwd)
         main.show()
     except Exception as e:
-        error_dialog.setText('connection failed with following error:\n\nerr code: {}\nerr msg.: {}\n\ncontact your database admin'.format(e.args[0], e.args[1]))
-        sys.exit(error_dialog.exec_())
+        connection_error_handler(e)
     #
     sys.exit(app.exec_())
 
