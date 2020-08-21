@@ -28,6 +28,10 @@ class Database(object):
         select_species = [s for s in self.db_species if s in file]
         return select_species
 
+    def signal_handler(self, sig, frame):
+        self.db.connection.close()
+        sys.exit(0)
+
 
 def read_key(value):
     #
@@ -90,15 +94,21 @@ def wrapstr(term, y, x, text, format=0):
         pass
     return term.getyx()
 
+def connection_error_handler(term, e):
+    while True:
+        term.clear()
+        y, x = wrapstr(term, 2, tab, 'connection failed with following error:', curses.A_BOLD)
+        y, x = wrapstr(term, y+2, tab, 'err code: {}'.format(e.args[0]), curses.color_pair(3))
+        y, x = wrapstr(term, y+1, tab, 'err msg.: {}'.format(e.args[1]), curses.color_pair(3))
+        y, x = wrapstr(term, y+2, tab, 'contact your database admin')
+        y, x = wrapstr(term, y+1, tab, 'press any key to exit')
+        key = term.getch()
+        if key == curses.KEY_RESIZE:
+            continue # this deals with resizing the terminal window
+        else:
+            sys.exit(0)
+
 def main(term):
-    #
-    def signal_handler(sig, frame):
-        ## code adapted from: https://stackoverflow.com/questions/1112343/how-do-i-capture-sigint-in-python
-        print('You pressed Ctrl+C!')
-        db.db.connection.close()
-        sys.exit(0)
-    #
-    signal.signal(signal.SIGINT, signal_handler)
     #
     curses.curs_set(0)
     #
@@ -121,30 +131,25 @@ def main(term):
     # define tabspace (min of x)
     tab = 8
     #
-    try:
+    try: # try to connect to the database (timeout = 10s)
         db = Database(user, host, passwd)
+        #
+        # setup signal handler (avoids exiting without closing the connection)
+        signal.signal(signal.SIGINT, db.signal_handler)
+        #
     except Exception as e:
-        while True:
-            term.clear()
-            y, x = wrapstr(term, 2, tab, 'connection failed with following error:', curses.A_BOLD)
-            y, x = wrapstr(term, y+2, tab, 'err code: {}'.format(e.args[0]), curses.color_pair(3))
-            y, x = wrapstr(term, y+1, tab, 'err msg.: {}'.format(e.args[1]), curses.color_pair(3))
-            y, x = wrapstr(term, y+2, tab, 'contact your database admin')
-            y, x = wrapstr(term, y+1, tab, 'press any key to exit')
-            key = term.getch()
-            if key == curses.KEY_RESIZE:
-                continue
-            else:
-                return
+        connection_error_handler(term, e)
     #
     while True:
         term.clear()
         #
+        # read db info
         couplet = db.select_couplets[db.cp_index]
         zero_text, one_text = db.db.show_couplet(couplet)
         species = db.select_species[db.sp_index]
         status = db.db.show_state(species, couplet)
         #
+        # display db info
         y, x = wrapstr(term, 2, tab, 'current couplet: {}'.format(couplet))
         y, x = wrapstr(term, y+2, tab+4, '0. {}'.format(zero_text))
         y, x = wrapstr(term, y+2, tab+4, '1. {}'.format(one_text))
@@ -159,6 +164,7 @@ def main(term):
         y, x = wrapstr(term, y+1, tab, '({}) previous couplet  ({}) next couplet      ({}) update'.format(PREV_C[1], NEXT_C[1], UPDATE[1]), curses.A_DIM)
         y, x = wrapstr(term, y+1, tab, '({}) previous species  ({}) next species      ({}) quit'.format(PREV_S[1], NEXT_S[1], QUIT[1]), curses.A_DIM)
         #
+        # await user input
         key = term.getch()
         #
         if key == NEXT_C[0]:
@@ -198,8 +204,8 @@ def main(term):
         elif key == QUIT[0]:
             break
         elif key == curses.KEY_RESIZE:
-            pass
-
+            pass # this deals with resizing the terminal window
+    #
     db.db.connection.close()
 
 
