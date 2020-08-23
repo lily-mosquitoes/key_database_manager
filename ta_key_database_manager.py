@@ -172,13 +172,13 @@ def main(term):
         key = term.getch()
         #
         if key == NEXT_C[0]:
-            if db.cp_index < len(db.select_couplets):
+            if db.cp_index < len(db.select_couplets)-1:
                 db.cp_index += 1
         elif key == PREV_C[0]:
             if db.cp_index > 0:
                 db.cp_index -= 1
         elif key == NEXT_S[0]:
-            if db.sp_index < len(db.select_species):
+            if db.sp_index < len(db.select_species)-1:
                 db.sp_index += 1
         elif key == PREV_S[0]:
             if db.sp_index > 0:
