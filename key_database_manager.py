@@ -1,4 +1,5 @@
 import sys
+import os
 import configparser
 from PyQt5 import QtWidgets, uic, QtGui
 from ui_files.main_window import Ui_MainWindow
@@ -45,12 +46,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.pushButton_change.pressed.connect(self.onChange)
 
     def fetch_select_couplets(self):
-        file = open('select/COUPLETS.txt').read().strip().split('\n')
+        file = open(os.path.join(os.path.dirname(sys.path[0]), 'select', 'COUPLETS.txt')).read().strip().split('\n')
         select_couplets = [c for c in self.db_couplets if c in file]
         return select_couplets
 
     def fetch_select_species(self):
-        file = open('select/SPECIES.txt').read().strip().split('\n')
+        file = open(os.path.join(os.path.dirname(sys.path[0]), 'select', 'SPECIES.txt')).read().strip().split('\n')
         select_species = [s for s in self.db_species if s in file]
         return select_species
 
@@ -103,7 +104,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 ###
 def read_conf():
     config = configparser.ConfigParser()
-    config.read('conf/conf')
+    config.read(os.path.join(os.path.dirname(sys.path[0]), 'conf', 'conf'))
     user = config['mosquito database']['User']
     host = config['mosquito database']['Host']
     passwd = config['mosquito database']['Password']
