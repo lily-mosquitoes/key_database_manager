@@ -73,7 +73,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def onCouplet(self, add):
         c_couplet_index = self.select_couplets.index(self.c_couplet)
         n_couplet_index = c_couplet_index + add
-        if n_couplet_index > len(self.select_couplets) or n_couplet_index < 0:
+        if n_couplet_index >= len(self.select_couplets) or n_couplet_index < 0:
             pass # avoid index out of range
         else:
             self.comboBox_couplet.setCurrentIndex(n_couplet_index)
@@ -82,7 +82,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def onSpecies(self, add):
         c_species_index = self.select_species.index(self.c_species)
         n_species_index = c_species_index + add
-        if n_species_index > len(self.select_couplets) or n_species_index < 0:
+        if n_species_index >= len(self.select_species) or n_species_index < 0:
             pass # avoid index out of range
         else:
             self.comboBox_species.setCurrentIndex(n_species_index)
