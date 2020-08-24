@@ -7,3 +7,14 @@ There exists both a GUI Application made with PyQt5 and a Terminal Application m
 For use, the applications (both GUI and TA) require the modification of the configuration file `conf` to add the User, Host and Password for the MySQL server hosting the `key_database`. Both also utilize the files `SPECIES.txt` and `COUPLETS.txt`, in the 'select' folder, to show to the user only select species/couplets, as opposed to the whole database. This means that the database admin must provide lists with the correct names of couplets and species that exist in the database tables. The current files in this repository contain all the mosquito (Diptera: Culicidae) species in the U.S.A., and all the couplets currently in use for mosquito identification in the Not a Key project (this is an unfinished list).
 
 The Terminal Application also accepts custom configuration for its key bindings, check the `conf` file for more information.
+
+## Running it:
+
+Install the requirements:
+`python3 -m pip install -r requirements.txt`
+
+To run the GUI Application:
+`python3 key_database_manager.py`
+
+To run the Terminal Application:
+`python3 ta_key_database_manager.py`
