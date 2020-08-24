@@ -66,10 +66,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             connection_error_handler(e)
         #
         self.label_couplet.setText('Current couplet: {}'.format(self.c_couplet))
+        self.label_couplet.repaint() #repaint for MacOS
         self.label_zero.setText(zero_text)
+        self.label_zero.repaint() #repaint for MacOS
         self.label_one.setText(one_text)
+        self.label_one.repaint() #repaint for MacOS
         self.label_species.setText(self.c_species)
+        self.label_species.repaint() #repaint for MacOS
         self.label_status.setText('Current status: {}'.format(state or 'NULL'))
+        self.label_status.repaint() #repaint for MacOS
 
     def onCouplet(self, add):
         c_couplet_index = self.select_couplets.index(self.c_couplet)
@@ -78,6 +83,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             pass # avoid index out of range
         else:
             self.comboBox_couplet.setCurrentIndex(n_couplet_index)
+            self.comboBox_couplet.repaint() #repaint for MacOS
             self.onJumpPress()
 
     def onSpecies(self, add):
@@ -87,6 +93,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             pass # avoid index out of range
         else:
             self.comboBox_species.setCurrentIndex(n_species_index)
+            self.comboBox_species.repaint() #repaint for MacOS
             self.onJumpPress()
 
     def onChange(self):
@@ -97,6 +104,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             # confirm UPDATE
             state = self.db.show_state(self.c_species, self.c_couplet)
             self.label_status.setText('Current status: {}'.format(state or 'NULL'))
+            self.label_status.repaint() #repaint for MacOS
         except Exception as e:
             connection_error_handler(e)
 
