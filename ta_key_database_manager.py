@@ -34,54 +34,105 @@ class Database(object):
         sys.exit(0)
 
 
-def read_key(value):
-    #
-    r = None
-    #
-    curses_keys = {
-    'KEY_DOWN': curses.KEY_DOWN,
-    'KEY_UP': curses.KEY_UP,
-    'KEY_LEFT': curses.KEY_LEFT,
-    'KEY_RIGHT': curses.KEY_RIGHT,
-    'KEY_BACKSPACE': curses.KEY_BACKSPACE,
-    'KEY_ENTER': ord('\n')
+###
+def readkey(key_number):
+    alias_keys = {
+        curses.KEY_UP: 'UP',
+        curses.KEY_DOWN: 'DOWN',
+        curses.KEY_LEFT: 'LEFT',
+        curses.KEY_RIGHT: 'RIGHT',
+        curses.KEY_BACKSPACE: 'BACKSPACE',
+        ord('\n'): 'ENTER',
+        ord(' '): 'SPACE',
+        ord('\t'): 'TAB'
     }
-    try:
-        if value in curses_keys.keys():
-            r = curses_keys[value]
-        else:
-            r = ord(value)
-    except TypeError:
-        pass
-    #
-    return r
+    if key_number in alias_keys.keys():
+        key_name = alias_keys[key_number]
+    else:
+        key_name = chr(key_number)
+    return key_name
 
-def read_conf():
+def set_config_data(term, config, config_path):
+    #
+    tab = 8
+    if config.has_section('mosquito database'):
+        pass
+    else:
+        config.add_section('mosquito database')
+    for i in ['User', 'Host', 'Password']:
+        term.clear()
+        y, x = wrapstr(term, 4, tab, 'please configure your User, Host and Password', curses.A_BOLD)
+        y, x = wrapstr(term, y+1, tab, "please don't resize this window", curses.A_DIM)
+        # get user
+        y, x = wrapstr(term, y+2, tab, "type the '{}' and press ENTER:".format(i))
+        curses.curs_set(1)
+        if i != 'Password':
+            curses.echo()
+        value = term.getstr(y, x+1).decode('utf-8')
+        curses.noecho()
+        curses.curs_set(0)
+        config.set('mosquito database', i, value)
+    #
+    with open(config_path, 'w') as configfile:
+        config.write(configfile)
+
+def set_config_keybindings(term, config, config_path):
+    #
+    tab = 8
+    if config.has_section('keybindings'):
+        pass
+    else:
+        config.add_section('keybindings')
+    for i in [('NextCouplet', 's'), ('PreviousCouplet', 'a'), ('NextSpecies', 'x'), ('PreviousSpecies', 'z'), ('Update', 'ENTER'), ('Confirm', 'ENTER'), ('Quit', 'q')]:
+        term.clear()
+        y, x = wrapstr(term, 4, tab, 'please configure your key bindings', curses.A_BOLD)
+        y, x = wrapstr(term, y+1, tab, "please don't resize this window", curses.A_DIM)
+        # get user
+        y, x = wrapstr(term, y+2, tab, "please press a key for '{}' (suggested key: '{}')".format(i[0], i[1]))
+        key = term.getch()
+        config.set('keybindings', i[0], str(key))
+    #
+    with open(config_path, 'w') as configfile:
+        config.write(configfile)
+
+def read_config(term, config_path):
     #
     config = configparser.ConfigParser()
-    config.read(os.path.join(os.path.dirname(sys.argv[0]), 'conf', 'conf'))
-    user = config['mosquito database']['User']
-    host = config['mosquito database']['Host']
-    passwd = config['mosquito database']['Password']
+    try:
+        config.read(config_path)
+        user = config.get('mosquito database', 'User')
+        host = config.get('mosquito database', 'Host')
+        passwd = config.get('mosquito database', 'Password')
+    except Exception:
+        set_config_data(term, config, config_path)
+        config.read(config_path)
+        user = config.get('mosquito database', 'User')
+        host = config.get('mosquito database', 'Host')
+        passwd = config.get('mosquito database', 'Password')
+    try:
+        config.read(config_path)
+        keybindings = {
+            'NextCouplet': int(config.get('keybindings', 'NextCouplet')),
+            'PreviousCouplet': int(config.get('keybindings', 'PreviousCouplet')),
+            'NextSpecies': int(config.get('keybindings', 'NextSpecies')),
+            'PreviousSpecies': int(config.get('keybindings', 'PreviousSpecies')),
+            'Update': int(config.get('keybindings', 'Update')),
+            'Confirm': int(config.get('keybindings', 'Confirm')),
+            'Quit': int(config.get('keybindings', 'Quit'))
+        }
+    except Exception:
+        set_config_keybindings(term, config, config_path)
+        config.read(config_path)
+        keybindings = {
+            'NextCouplet': int(config.get('keybindings', 'NextCouplet')),
+            'PreviousCouplet': int(config.get('keybindings', 'PreviousCouplet')),
+            'NextSpecies': int(config.get('keybindings', 'NextSpecies')),
+            'PreviousSpecies': int(config.get('keybindings', 'PreviousSpecies')),
+            'Update': int(config.get('keybindings', 'Update')),
+            'Confirm': int(config.get('keybindings', 'Confirm')),
+            'Quit': int(config.get('keybindings', 'Quit'))
+        }
     #
-    # aliasing
-    nc = config['ta keybindings']['NextCouplet']
-    pc = config['ta keybindings']['PreviousCouplet']
-    ns = config['ta keybindings']['NextSpecies']
-    ps = config['ta keybindings']['PreviousSpecies']
-    u = config['ta keybindings']['Update']
-    c = config['ta keybindings']['Confirm']
-    q = config['ta keybindings']['Quit']
-    keybindings = {
-        'NextCouplet': (read_key(nc) or 's', nc),
-        'PreviousCouplet': (read_key(pc) or 'a', pc),
-        'NextSpecies': (read_key(ns) or 'x', ns),
-        'PreviousSpecies': (read_key(ps) or 'z', ps),
-        'Update': (read_key(u) or '\n', u),
-        'Confirm': (read_key(c) or 'c', c),
-        'Quit': (read_key(q) or 'q', q)
-    }
-
     return user, host, passwd, keybindings
 
 def wrapstr(term, y, x, text, format=0):
@@ -111,28 +162,65 @@ def connection_error_handler(term, e):
             sys.exit(0)
 
 def main(term):
+    # define tabspace (min of x)
+    tab = 8
     #
+    # hide cursor
     curses.curs_set(0)
     #
+    # clear terminal
     term.clear()
     #
     # init color pairs
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
     #
-    # reading config
-    user, host, passwd, keybindings = read_conf()
-    NEXT_C = keybindings['NextCouplet']
-    PREV_C = keybindings['PreviousCouplet']
-    NEXT_S = keybindings['NextSpecies']
-    PREV_S = keybindings['PreviousSpecies']
-    UPDATE = keybindings['Update']
-    CONFIRM = keybindings['Confirm']
-    QUIT = keybindings['Quit']
+    # config path
+    config_path = os.path.join(os.path.dirname(sys.argv[0]), 'config', 'ta_key_data_manager.config')
     #
-    # define tabspace (min of x)
-    tab = 8
+    # confirm configuration
+    while True:
+        term.clear()
+        # reading config
+        user, host, passwd, keybindings = read_config(term, config_path)
+        NEXT_C = keybindings['NextCouplet']
+        PREV_C = keybindings['PreviousCouplet']
+        NEXT_S = keybindings['NextSpecies']
+        PREV_S = keybindings['PreviousSpecies']
+        UPDATE = keybindings['Update']
+        CONFIRM = keybindings['Confirm']
+        QUIT = keybindings['Quit']
+        #
+        y, x = wrapstr(term, 2, tab, "Please press any key to confirm your user configuration; press 'r' to reset database login configuration, or press 't' to reset your keybindings", curses.A_BOLD)
+        #
+        # show database config
+        y, x = wrapstr(term, y+2, tab, 'user: {}'.format(user))
+        y, x = wrapstr(term, y+2, tab, 'host: {}'.format(host))
+        y, x = wrapstr(term, y+2, tab, 'passwd: {}'.format('-'*len(passwd)))
+        #
+        # show keybindings config
+        y, x = wrapstr(term, y+7, tab, 'this is your current keybindings configuration:', curses.A_DIM)
+        y, x = wrapstr(term, y+1, tab, '({}) previous couplet  ({}) next couplet      ({}) update'.format(readkey(PREV_C), readkey(NEXT_C), readkey(UPDATE)), curses.A_DIM)
+        y, x = wrapstr(term, y+1, tab, '({}) previous species  ({}) next species      ({}) quit'.format(readkey(PREV_S), readkey(NEXT_S), readkey(QUIT)), curses.A_DIM)
+        #
+        # await user input
+        key = term.getch()
+        if key == curses.KEY_RESIZE:
+            pass # this deals with resizing the terminal window
+        elif key == ord('r'):
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            set_config_data(term, config, config_path)
+        elif key == ord('t'):
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            set_config_keybindings(term, config, config_path)
+        else:
+            break
     #
+    term.clear()
+    y, x = wrapstr(term, 2, tab, 'connecting to the database, please wait', curses.A_DIM)
+    term.refresh() # force update screen
     try: # try to connect to the database (timeout = 10s)
         db = Database(user, host, passwd)
         #
@@ -166,26 +254,26 @@ def main(term):
         #
         # display helper text
         y, x = wrapstr(term, y+7, tab, 'keybindings:', curses.A_DIM)
-        y, x = wrapstr(term, y+1, tab, '({}) previous couplet  ({}) next couplet      ({}) update'.format(PREV_C[1], NEXT_C[1], UPDATE[1]), curses.A_DIM)
-        y, x = wrapstr(term, y+1, tab, '({}) previous species  ({}) next species      ({}) quit'.format(PREV_S[1], NEXT_S[1], QUIT[1]), curses.A_DIM)
+        y, x = wrapstr(term, y+1, tab, '({}) previous couplet  ({}) next couplet      ({}) update'.format(readkey(PREV_C), readkey(NEXT_C), readkey(UPDATE)), curses.A_DIM)
+        y, x = wrapstr(term, y+1, tab, '({}) previous species  ({}) next species      ({}) quit'.format(readkey(PREV_S), readkey(NEXT_S), readkey(QUIT)), curses.A_DIM)
         #
         # await user input
         key = term.getch()
         #
-        if key == NEXT_C[0]:
+        if key == NEXT_C:
             if db.cp_index < len(db.select_couplets)-1:
                 db.cp_index += 1
-        elif key == PREV_C[0]:
+        elif key == PREV_C:
             if db.cp_index > 0:
                 db.cp_index -= 1
-        elif key == NEXT_S[0]:
+        elif key == NEXT_S:
             if db.sp_index < len(db.select_species)-1:
                 db.sp_index += 1
-        elif key == PREV_S[0]:
+        elif key == PREV_S:
             if db.sp_index > 0:
                 db.sp_index -= 1
-        elif key == UPDATE[0]:
-            y, x = wrapstr(term, input_y, tab, 'type a new value to edit the database:   ')
+        elif key == UPDATE:
+            y, x = wrapstr(term, input_y, tab, 'type a new value to edit the database:')
             curses.curs_set(1)
             curses.echo()
             new_status = term.getstr(y, x+1).decode('utf-8').upper()
@@ -195,9 +283,9 @@ def main(term):
                 new_status = None
             if new_status in ['0', '1', '01', '10', 'NA', None]:
                 y, x = wrapstr(term, y+1, tab, 'new status: {}'.format(new_status), curses.A_BOLD)
-                y, x = wrapstr(term, y+1, tab, "press '{}' to confirm, or any key to cancel".format(CONFIRM[1]))
+                y, x = wrapstr(term, y+1, tab, "press '{}' to confirm, or any key to cancel".format(readkey(CONFIRM)))
                 confirm = term.getch()
-                if confirm == CONFIRM[0]:
+                if confirm == CONFIRM:
                     try: # try to perform an update:
                         db.db.update(species, new_status, couplet)
                         y, x = wrapstr(term, y+1, tab, 'change confirmed, press any key to continue', curses.color_pair(2))
@@ -209,7 +297,7 @@ def main(term):
                 y, x = wrapstr(term, y+1, tab, 'illegal status: {}'.format(new_status), curses.color_pair(3))
                 y, x = wrapstr(term, y+1, tab, "please type '0', '1', '01' or 'NA'")
             term.getch()
-        elif key == QUIT[0]:
+        elif key == QUIT:
             break
         elif key == curses.KEY_RESIZE:
             pass # this deals with resizing the terminal window
