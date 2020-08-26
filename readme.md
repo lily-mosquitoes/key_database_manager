@@ -12,7 +12,7 @@ The Terminal Application also accepts custom configuration for its key bindings,
 
 The applications were changed to set up the `.config` file at runtime, you may change the configurations from within the applications at any time; if you must completely reset configurations simply delete the file; do not manually change it.
 
-The key bindings stored in the `.config` file for the TA were changed to non-human readable format (key codes from the python `ord()` function). This was done to simplify coding, since the file isn't supposed to be manually edited anymore.
+The key bindings stored in the `.config` file for the TA were changed to non-human-readable format (key codes from the python `ord()` function). This was done to simplify coding, since the file isn't supposed to be manually edited anymore.
 
 ## Running it:
 
