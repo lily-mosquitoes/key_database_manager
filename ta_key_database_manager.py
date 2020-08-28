@@ -281,6 +281,8 @@ def main(term):
             curses.curs_set(0)
             if new_status.upper() == 'NULL_VALUE':
                 new_status = None
+            elif new_status == '3':
+                new_status = 'NA'
             if new_status in ['0', '1', '01', '10', 'NA', None]:
                 y, x = wrapstr(term, y+1, tab, 'new status: {}'.format(new_status), curses.A_BOLD)
                 y, x = wrapstr(term, y+1, tab, "press '{}' to confirm, or any key to cancel".format(readkey(CONFIRM)))
