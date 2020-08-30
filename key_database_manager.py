@@ -27,7 +27,7 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
     def UiComponents(self):
         #
         self.label_info.setText('Current login info:\n\n    User: {}\n\n    Host: {}\n\n'.format(self.user, self.host))
-        self.label_info..repaint() #repaint for MacOS
+        self.label_info.repaint() #repaint for MacOS
         #
         self.label_coupletFile.setText(self.couplet_filter.split(os.path.sep)[-1])
         self.label_coupletFile.repaint() #repaint for MacOS
