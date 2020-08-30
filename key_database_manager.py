@@ -54,7 +54,7 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
     def changeLoginInfo(self):
         config = ConfigWindow(self.config_path)
         config.exec_()
-        self.user, self.host, self.passwd = self.read_config(self.config_path)
+        self.user, self.host, self.passwd, self.couplet_filter, self.species_filter = self.read_config()
         self.UiComponents()
 
     def setCoupletFilter(self):
@@ -171,9 +171,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.comboBox_species.addItems(self.select_species)
         self.comboBox_status.addItems(['0', '1', '01', 'NA'])
         #
-        self.onJumpPress()
+        self.onChoose()
         #
-        self.pushButton_jump.pressed.connect(self.onJumpPress)
+        self.comboBox_couplet.currentIndexChanged.connect(self.onChoose)
+        self.comboBox_species.currentIndexChanged.connect(self.onChoose)
         #
         self.pushButton_nextCouplet.pressed.connect(lambda: self.onCouplet(1))
         self.pushButton_previousCouplet.pressed.connect(lambda: self.onCouplet(-1))
@@ -194,7 +195,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         select_species = [s for s in self.db_species if s in file]
         return select_species
 
-    def onJumpPress(self):
+    def onChoose(self):
         self.c_couplet = str(self.comboBox_couplet.currentText())
         self.c_species = str(self.comboBox_species.currentText())
         #
@@ -223,7 +224,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             self.comboBox_couplet.setCurrentIndex(n_couplet_index)
             self.comboBox_couplet.repaint() #repaint for MacOS
-            self.onJumpPress()
+            self.onChoose()
 
     def onSpecies(self, add):
         c_species_index = self.select_species.index(self.c_species)
@@ -233,7 +234,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             self.comboBox_species.setCurrentIndex(n_species_index)
             self.comboBox_species.repaint() #repaint for MacOS
-            self.onJumpPress()
+            self.onChoose()
 
     def onChange(self):
         try:
