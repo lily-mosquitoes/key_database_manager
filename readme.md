@@ -1,5 +1,7 @@
 # Key Database Manager
 
+![release](https://img.shields.io/github/v/release/lily-mosquitoes/key_database_manager?include_prereleases)
+
 This is a tool developed to help build and maintain a database intended to be used by the **Not a Key** project. Not a Key is an identification tool, similar to a dichotomous key, but *dynamic*. This tool is being developed to aid with mosquito (Diptera: Culicidae) identification by non-specialists.
 
 There exists both a GUI Application made with Qt and a Terminal Application made using the python curses module. Both do the same thing: provide a user friendly environment to manually update the `key_database` that is queried by the Not a Key project.
