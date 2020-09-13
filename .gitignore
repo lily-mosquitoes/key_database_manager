@@ -1,20 +1,22 @@
 # interpreter files
-__pycache__/
+__pycache__
+*pyc
 
 # pyqt5 files
 *.ui
 
 # packaging files
-build/
-dist/
+build
+dist
 *.spec
 
 # MacOS files
 .DS_Store
 
 # my files
-trash/
+trash
 *.sh
+*.log
 *.jar
 
 # private files
