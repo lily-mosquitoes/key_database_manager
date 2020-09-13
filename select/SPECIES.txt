@@ -138,7 +138,7 @@ Ochlerotatus (Culicelsa) sollicitans
 Ochlerotatus (Culicelsa) taeniorhynchus
 Ochlerotatus (Rusticoidus) bicristatus
 Ochlerotatus (Rusticoidus) provocans
-Rampamyia notoscripta
+Rampamyia notoscripta notoscripta
 Kompia purpureipes
 Culiseta (Culiseta) alaskaensis
 Culiseta (Culiseta) impatiens
