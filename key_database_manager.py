@@ -46,7 +46,7 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
 
     def db_connect(self):
         try:
-            self.db = ModelDataset(self.user, self.host, self.passwd)
+            self.db = ModelDataset(user=self.user, host=self.host, password=self.passwd, db='key_database')
         except Exception as e:
             connection_error_handler(e)
         self.hide()

@@ -8,8 +8,8 @@ from models.model_dataset import ModelDataset
 
 
 class Database(object):
-    def __init__(self, user, host, passwd):
-        self.db = ModelDataset(user, host, passwd)
+    def __init__(self, **kwargs):
+        self.db = ModelDataset(**kwargs)
         self.db_species = self.db.list_species()
         self.db_couplets = self.db.list_couplets()
         #
@@ -222,7 +222,7 @@ def main(term):
     y, x = wrapstr(term, 2, tab, 'connecting to the database, please wait', curses.A_DIM)
     term.refresh() # force update screen
     try: # try to connect to the database (timeout = 10s)
-        db = Database(user, host, passwd)
+        db = Database(user=user, host=host, passwd=passwd, db='key_database')
         #
         # setup signal handler (avoids exiting without closing the connection)
         signal.signal(signal.SIGINT, db.signal_handler)
