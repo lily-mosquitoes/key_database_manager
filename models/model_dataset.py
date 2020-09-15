@@ -11,7 +11,9 @@ class ModelDataset(object):
         return self._connection
 
     def _show_couplet_text(self, text, couplet):
-        sql = "SELECT {} FROM couplet_data WHERE couplet_data.couplet = '{}';".format(text, couplet)
+        sql = """
+            SELECT {} FROM couplet_data WHERE couplet_data.couplet = '{}';
+        """.format(text, couplet)
         try:
             self.cursor.execute(sql)
             text = self.cursor.fetchone()[0]
@@ -26,7 +28,7 @@ class ModelDataset(object):
 
     def list_species(self):
         sql = """
-        SHOW COLUMNS FROM species_states;
+            SHOW COLUMNS FROM species_states;
         """
         try:
             self.cursor.execute(sql)
@@ -39,7 +41,7 @@ class ModelDataset(object):
 
     def list_couplets(self):
         sql = """
-        SELECT couplet FROM species_states;
+            SELECT couplet FROM species_states;
         """
         try:
             self.cursor.execute(sql)
@@ -51,7 +53,7 @@ class ModelDataset(object):
 
     def show_state(self, species, couplet):
         sql = """
-        SELECT `{}` FROM species_states WHERE species_states.couplet = '{}';
+            SELECT `{}` FROM species_states WHERE species_states.couplet = '{}';
         """.format(species, couplet)
         try:
             self.cursor.execute(sql)
@@ -68,9 +70,9 @@ class ModelDataset(object):
         else:
             raise pymysql.IntegrityError
         sql = """
-        UPDATE `species_states`
-        SET `{}` = {}
-        WHERE `species_states`.`couplet` = '{}';
+            UPDATE `species_states`
+                SET `{}` = {}
+                WHERE `species_states`.`couplet` = '{}';
         """.format(species, value, couplet)
         try:
             self.cursor.execute(sql)
