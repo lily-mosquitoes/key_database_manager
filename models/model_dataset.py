@@ -2,13 +2,8 @@ import pymysql
 
 class ModelDataset(object):
 
-    def __init__(self, user, host, password):
-        self._connection = pymysql.connect(
-            host = host,
-            user = user,
-            password = password,
-            db = 'key_database',
-        )
+    def __init__(self, **kwargs):
+        self._connection = pymysql.connect(**kwargs)
         self.cursor = self._connection.cursor()
 
     @property
@@ -66,10 +61,12 @@ class ModelDataset(object):
         return state
 
     def update(self, species, value, couplet):
-        if value != None:
+        if value != None and value in ['0', '1', '01', '10', 'NA']:
             value = "'{}'".format(value)
-        else:
+        elif value == None:
             value = 'NULL'
+        else:
+            raise pymysql.IntegrityError
         sql = """
         UPDATE `species_states`
         SET `{}` = {}
