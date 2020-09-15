@@ -21,3 +21,6 @@ trash
 
 # private files
 config/*.config
+
+# except tests bash files
+!tests/*.sh
