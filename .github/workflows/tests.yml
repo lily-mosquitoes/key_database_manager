@@ -36,7 +36,7 @@ jobs:
           MYSQL_HOST: 'localhost'
           MYSQL_PASSWORD: 'password'
         run: |
-          mysql -u $MYSQL_USER -h $MYSQL_HOST -p$MYSQL_PASSWORD < key_data_manager/tests/test_key_database.sql
+          mysql -u $MYSQL_USER -h $MYSQL_HOST -p$MYSQL_PASSWORD -e "CREATE DATABASE test_key_database;"
       - name: run_tests
         env:
           MYSQL_USER: 'root'
