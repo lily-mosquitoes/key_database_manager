@@ -34,6 +34,6 @@ jobs:
         env:
           MYSQL_USER: 'root'
           MYSQL_HOST: 'localhost'
-          MYSQL_PASSWORD: 'root'
+          MYSQL_PASSWORD: 'password'
         run: |
           python -m unittest
