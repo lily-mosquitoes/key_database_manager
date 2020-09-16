@@ -4,16 +4,6 @@ jobs:
   test:
     runs-on: ubuntu-20.04
 
-    # services:
-    #   mysql:
-    #     image: mysql:8.0
-    #     env:
-    #       MYSQL_ROOT_PASSWORD: password
-    #     ports:
-    #       - 3306:3306
-    #     # needed because the mysql container does not provide a healthcheck
-    #     options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 5
-
     steps:
       - name: checkout
         uses: actions/checkout@v2 # default checkout action for workflows
@@ -29,13 +19,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install cryptography
           python -m pip install -r requirements.txt
-      - name: test_database_access
-        env:
-          MYSQL_USER: 'root'
-          MYSQL_HOST: 'localhost'
-          MYSQL_PASSWORD: 'root'
-        run: |
-          mysql -u$MYSQL_USER -h 127.0.0.1 -p$MYSQL_PASSWORD -e "CREATE DATABASE test_key_database;"
       - name: run_tests
         env:
           MYSQL_USER: 'root'
