@@ -5,8 +5,8 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mysql-service:
-        image: mysql:8.0
+      mysql:
+        image: mysql
         env:
           MYSQL_ROOT_PASSWORD: password
         ports:
@@ -17,10 +17,10 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2 # default checkout action for workflows
-      # - name: start_mysql_service
-      #   run: |
-      #     sudo systemctl enable mysql.service
-      #     sudo systemctl start mysql.service
+      - name: start_mysql_service
+        run: |
+          sudo systemctl enable mysql
+          sudo systemctl start mysql
       - name: setup_python
         uses: actions/setup-python@v2
         with:
