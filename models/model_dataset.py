@@ -52,6 +52,14 @@ class ModelDataset(object):
         return couplets
 
     def show_state(self, species, couplet):
+        # input validation
+        db_species = self.list_species()
+        db_couplets = self.list_couplets()
+        if species in db_species and couplet in db_couplets:
+            pass
+        else:
+            raise pymysql.IntegrityError
+        #
         sql = """
             SELECT `{}` FROM species_states WHERE species_states.couplet = '{}';
         """.format(species, couplet)
@@ -63,12 +71,14 @@ class ModelDataset(object):
         return state
 
     def update(self, species, value, couplet):
+        # input validation
         if value != None and value in ['0', '1', '01', '10', 'NA']:
             value = "'{}'".format(value)
         elif value == None:
             value = 'NULL'
         else:
             raise pymysql.IntegrityError
+        #
         sql = """
             UPDATE `species_states`
                 SET `{}` = {}
