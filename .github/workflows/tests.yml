@@ -1,0 +1,35 @@
+name: tests
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - 3306:3306
+        # needed because the mysql container does not provide a healthcheck
+        options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2 # default checkout action for workflows
+      - name: setup_python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.7'
+      - name: start_mysql_service
+        run: |
+          sudo systemctl start mysql.service
+      - name: install_project_dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+      - name: run_tests
+        env:
+          MYSQL_USER: 'root'
+          MYSQL_HOST: 'localhost'
+          MYSQL_PASSWORD: 'root'
+        run: |
+          python -m unittest
