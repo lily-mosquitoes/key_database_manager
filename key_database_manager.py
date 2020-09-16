@@ -184,6 +184,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         #
         ### MOST IMPORTANT BUTTON: UPDATE FUNCTION
         self.pushButton_change.pressed.connect(self.onChange)
+        #
+        # change password action
+        self.action_change_my_password.triggered.connect(self.onChangeMyPassword)
 
     def fetch_select_couplets(self, config):
         file = open(config.get('filter files', 'Couplets')).read().strip().split('\n')
@@ -194,6 +197,30 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         file = open(config.get('filter files', 'Species')).read().strip().split('\n')
         select_species = [s for s in self.db_species if s in file]
         return select_species
+
+    def get_new_password(self, message):
+        text, okPressed = QtWidgets.QInputDialog.getText(self, message,"New password:", QtWidgets.QLineEdit.Password, "")
+        if not okPressed:
+            pass
+        elif okPressed and len(text) >= 8:
+            return text
+        else:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Information)
+            msg.setText('Password must be at least 8 characters long.')
+            msg.exec_()
+
+    def change_current_user_password(self, text):
+        try:
+            # change password for current user
+            self.db.change_my_password(text)
+            config = configparser.ConfigParser()
+            config.read(self.config_path)
+            config.set('mosquito database', 'Password', text)
+            with open(self.config_path, 'w') as configfile:
+                config.write(configfile)
+        except Exception as e:
+            connection_error_handler(e)
 
     def onChoose(self):
         self.c_couplet = str(self.comboBox_couplet.currentText())
@@ -247,6 +274,23 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.label_status.repaint() #repaint for MacOS
         except Exception as e:
             connection_error_handler(e)
+
+    def onChangeMyPassword(self):
+
+        text = self.get_new_password("Type a new password")
+
+        if text == None:
+            pass
+        else:
+            text2 = self.get_new_password("Please type again")
+
+            if text == text2:
+                self.change_current_user_password(text)
+            else:
+                msg = QtWidgets.QMessageBox()
+                msg.setIcon(QtWidgets.QMessageBox.Warning)
+                msg.setText("Passwords don't match!")
+                msg.exec_()
 
 
 ###

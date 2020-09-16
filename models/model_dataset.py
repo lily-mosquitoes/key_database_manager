@@ -80,3 +80,18 @@ class ModelDataset(object):
         except pymysql.Error as e:
             self.connection.rollback()
             raise e
+
+    def change_my_password(self, text):
+        if len(text) >= 8:
+            sql = """
+                SET PASSWORD = %s;
+            """
+            params = [text]
+            try:
+                self.cursor.execute(sql, params)
+                self.connection.commit()
+            except pymysql.Error as e:
+                self.connection.rollback()
+                raise e
+        else:
+            raise pymysql.IntegrityError('passwords must be at least 8 characters long')

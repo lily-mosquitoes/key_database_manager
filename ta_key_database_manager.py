@@ -29,6 +29,9 @@ class Database(object):
         select_species = [s for s in self.db_species if s in file]
         return select_species
 
+    def change_my_password(self, text):
+        self.db.change_my_password(text)
+
     def signal_handler(self, sig, frame):
         self.db.connection.close()
         sys.exit(0)
@@ -83,7 +86,7 @@ def set_config_keybindings(term, config, config_path):
         pass
     else:
         config.add_section('keybindings')
-    for i in [('NextCouplet', 's'), ('PreviousCouplet', 'a'), ('NextSpecies', 'x'), ('PreviousSpecies', 'z'), ('Update', 'ENTER'), ('Confirm', 'ENTER'), ('Quit', 'q')]:
+    for i in [('ChangePassword', 'P'), ('NextCouplet', 's'), ('PreviousCouplet', 'a'), ('NextSpecies', 'x'), ('PreviousSpecies', 'z'), ('Update', 'ENTER'), ('Confirm', 'ENTER'), ('Quit', 'q')]:
         term.clear()
         y, x = wrapstr(term, 4, tab, 'please configure your key bindings', curses.A_BOLD)
         y, x = wrapstr(term, y+1, tab, "please don't resize this window", curses.A_DIM)
@@ -112,6 +115,7 @@ def read_config(term, config_path):
     try:
         config.read(config_path)
         keybindings = {
+            'ChangePassword': int(config.get('keybindings', 'ChangePassword')),
             'NextCouplet': int(config.get('keybindings', 'NextCouplet')),
             'PreviousCouplet': int(config.get('keybindings', 'PreviousCouplet')),
             'NextSpecies': int(config.get('keybindings', 'NextSpecies')),
@@ -124,6 +128,7 @@ def read_config(term, config_path):
         set_config_keybindings(term, config, config_path)
         config.read(config_path)
         keybindings = {
+            'ChangePassword': int(config.get('keybindings', 'ChangePassword')),
             'NextCouplet': int(config.get('keybindings', 'NextCouplet')),
             'PreviousCouplet': int(config.get('keybindings', 'PreviousCouplet')),
             'NextSpecies': int(config.get('keybindings', 'NextSpecies')),
@@ -145,6 +150,40 @@ def wrapstr(term, y, x, text, format=0):
     else:
         pass
     return term.getyx()
+
+def change_current_user_password(term, db, config_path):
+    tab = 8
+    term.clear()
+    # message
+    y, x = wrapstr(term, 2, tab, "Passwords must be at least 8 characters long", curses.A_BOLD)
+    y, x = wrapstr(term, y+1, tab, "please don't resize this window", curses.A_DIM)
+    # type once
+    y, x = wrapstr(term, y+2, tab, "please type a new password:")
+    curses.curs_set(1)
+    text = term.getstr(y, x+1).decode('utf-8')
+    curses.curs_set(0)
+    # type twice
+    y, x = wrapstr(term, y+2, tab, "please type again:")
+    curses.curs_set(1)
+    text2 = term.getstr(y, x+1).decode('utf-8')
+    curses.curs_set(0)
+    # check if they are the same and above 8 characters
+    if text == text2 and len(text) >= 8:
+        try:
+            db.change_my_password(text)
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            config.set('mosquito database', 'Password', text)
+            with open(config_path, 'w') as configfile:
+                config.write(configfile)
+            y, x = wrapstr(term, y+2, tab, "password changed!", curses.color_pair(2))
+        except Exception as e:
+            connection_error_handler(term, e)
+    elif len(text) < 8:
+        y, x = wrapstr(term, y+2, tab, "passwords must be at least 8 characters long!", curses.color_pair(3))
+    elif text != text2:
+        y, x = wrapstr(term, y+2, tab, "passwords don't match!", curses.color_pair(3))
+    term.getch()
 
 def connection_error_handler(term, e):
     tab = 8
@@ -183,6 +222,7 @@ def main(term):
         term.clear()
         # reading config
         user, host, passwd, keybindings = read_config(term, config_path)
+        CHANGE_PASSWORD = keybindings['ChangePassword']
         NEXT_C = keybindings['NextCouplet']
         PREV_C = keybindings['PreviousCouplet']
         NEXT_S = keybindings['NextSpecies']
@@ -242,8 +282,11 @@ def main(term):
         except Exception as e:
             connection_error_handler(term, e)
         #
+        # display actions
+        y, x = wrapstr(term, 2, tab, '({}) change password'.format(readkey(CHANGE_PASSWORD)), curses.A_DIM)
+        #
         # display db info
-        y, x = wrapstr(term, 2, tab, 'current couplet: {}'.format(couplet))
+        y, x = wrapstr(term, y+2, tab, 'current couplet: {}'.format(couplet))
         y, x = wrapstr(term, y+2, tab+4, '0. {}'.format(zero_text))
         y, x = wrapstr(term, y+2, tab+4, '1. {}'.format(one_text))
         y, x = wrapstr(term, y+2, tab, 'current species: {}'.format(species))
@@ -260,7 +303,9 @@ def main(term):
         # await user input
         key = term.getch()
         #
-        if key == NEXT_C:
+        if key == CHANGE_PASSWORD:
+            change_current_user_password(term, db, config_path)
+        elif key == NEXT_C:
             if db.cp_index < len(db.select_couplets)-1:
                 db.cp_index += 1
         elif key == PREV_C:

@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(901, 662)
+        MainWindow.resize(901, 668)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
@@ -240,6 +240,16 @@ class Ui_MainWindow(object):
         spacerItem9 = QtWidgets.QSpacerItem(30, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem9)
         MainWindow.setCentralWidget(self.centralwidget)
+        self.menuBar = QtWidgets.QMenuBar(MainWindow)
+        self.menuBar.setGeometry(QtCore.QRect(0, 0, 901, 22))
+        self.menuBar.setObjectName("menuBar")
+        self.menuChange_Password = QtWidgets.QMenu(self.menuBar)
+        self.menuChange_Password.setObjectName("menuChange_Password")
+        MainWindow.setMenuBar(self.menuBar)
+        self.action_change_my_password = QtWidgets.QAction(MainWindow)
+        self.action_change_my_password.setObjectName("action_change_my_password")
+        self.menuChange_Password.addAction(self.action_change_my_password)
+        self.menuBar.addAction(self.menuChange_Password.menuAction())
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -262,4 +272,6 @@ class Ui_MainWindow(object):
         self.pushButton_nextCouplet.setText(_translate("MainWindow", "Next couplet"))
         self.pushButton_previousSpecies.setText(_translate("MainWindow", "Previous species"))
         self.pushButton_nextSpecies.setText(_translate("MainWindow", "Next species"))
+        self.menuChange_Password.setTitle(_translate("MainWindow", "Actions"))
+        self.action_change_my_password.setText(_translate("MainWindow", "Change my password"))
 
