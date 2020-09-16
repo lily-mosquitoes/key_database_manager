@@ -89,7 +89,7 @@ class Ui_Dialog(object):
         sizePolicy.setHeightForWidth(self.password.sizePolicy().hasHeightForWidth())
         self.password.setSizePolicy(sizePolicy)
         self.password.setMinimumSize(QtCore.QSize(100, 0))
-        self.password.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.password.setEchoMode(QtWidgets.QLineEdit.PasswordEchoOnEdit)
         self.password.setObjectName("password")
         self.horizontalLayout_3.addWidget(self.password)
         spacerItem8 = QtWidgets.QSpacerItem(20, 20, QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Minimum)
