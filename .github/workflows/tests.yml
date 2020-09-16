@@ -30,6 +30,13 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install cryptography
           python -m pip install -r requirements.txt
+      - name: test_database_access
+        env:
+          MYSQL_USER: 'root'
+          MYSQL_HOST: 'localhost'
+          MYSQL_PASSWORD: 'password'
+        run: |
+          mysql -u $MYSQL_USER -h $MYSQL_HOST -p$MYSQL_PASSWORD < test_key_database.sql
       - name: run_tests
         env:
           MYSQL_USER: 'root'
