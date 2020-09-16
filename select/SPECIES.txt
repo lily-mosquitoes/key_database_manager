@@ -24,7 +24,7 @@ Toxorhynchites (Lynchiella) rutilus rutilus
 Toxorhynchites (Lynchiella) rutilus septentrionalis
 Uranotaenia (Pseudoficalbia) anhydor anhydor
 Uranotaenia (Pseudoficalbia) anhydor syntheta
-Uranotaenia (Uranotaenia) lowi
+Uranotaenia (Uranotaenia) lowii
 Uranotaenia (Uranotaenia) sapphirina
 Orthopodomyia alba
 Orthopodomyia kummi
@@ -70,7 +70,7 @@ Jarnellius varipalpus
 'Ochlerotatus' ('Protomacleaya') zoosophus
 Aedes cinereus
 Georgecraigius (Georgecraigius) atropalpus
-Georgecraigius (Georgecraigius) epaticus
+Georgecraigius (Georgecraigius) epactius
 Aedimorphus vexans vexans
 Ochlerotatus aboriginis
 Ochlerotatus abserratus
