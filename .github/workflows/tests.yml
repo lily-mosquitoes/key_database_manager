@@ -19,8 +19,7 @@ jobs:
         uses: actions/checkout@v2 # default checkout action for workflows
       - name: start_mysql_service
         run: |
-          sudo systemctl enable mysql
-          sudo systemctl start mysql
+          sudo service mysql start
       - name: setup_python
         uses: actions/setup-python@v2
         with:
