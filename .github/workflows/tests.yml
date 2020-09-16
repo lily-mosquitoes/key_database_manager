@@ -17,10 +17,10 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2 # default checkout action for workflows
-      - name: start_mysql_service
-        run: |
-          sudo systemctl enable mysql.service
-          sudo systemctl start mysql.service
+      # - name: start_mysql_service
+      #   run: |
+      #     sudo systemctl enable mysql.service
+      #     sudo systemctl start mysql.service
       - name: setup_python
         uses: actions/setup-python@v2
         with:
@@ -36,7 +36,7 @@ jobs:
           MYSQL_HOST: 'localhost'
           MYSQL_PASSWORD: 'password'
         run: |
-          mysql -u $MYSQL_USER -h $MYSQL_HOST -p$MYSQL_PASSWORD -e "CREATE DATABASE test_key_database;"
+          mysql -u$MYSQL_USER -h 127.0.0.1 -p$MYSQL_PASSWORD -e "CREATE DATABASE test_key_database;"
       - name: run_tests
         env:
           MYSQL_USER: 'root'
