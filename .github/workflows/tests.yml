@@ -19,7 +19,8 @@ jobs:
         uses: actions/checkout@v2 # default checkout action for workflows
       - name: start_mysql_service
         run: |
-          sudo service mysql start
+          sudo apt install mysql-server
+          sudo systemctl start mysql
       - name: setup_python
         uses: actions/setup-python@v2
         with:
