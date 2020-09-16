@@ -23,6 +23,7 @@ jobs:
           python-version: '3.7'
       - name: start_mysql_service
         run: |
+          sudo systemctl enable mysql.service
           sudo systemctl start mysql.service
       - name: install_project_dependencies
         run: |
