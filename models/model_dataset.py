@@ -74,7 +74,7 @@ class ModelDataset(object):
         # input validation
         if value != None and value in ['0', '1', '01', '10', 'NA']:
             value = "'{}'".format(value)
-        elif value == None:
+        elif value == None or value == 'NULL':
             value = 'NULL'
         else:
             raise pymysql.IntegrityError
