@@ -28,7 +28,7 @@ For bulk updates a `.csv` file must be provided, with the following configuratio
 
 ## How to get it:
 
-Click on [releases](https://github.com/lily-mosquitoes/key_database_manager/releases) and you will find a set of `.zip` files under 'assets'. Download the `.zip` file corresponding to your system, unzip it and run the executable from either the GUI Application (under the folder `key_database_manager`) or the Terminal Application (under the folder `ta_key_database_manager`)
+Click on [releases](https://github.com/lily-mosquitoes/key_database_manager/releases) and you will find a set of `.zip` files under 'assets'. Download the `.zip` file corresponding to your system, unzip it and run the executable for either the GUI Application (under the folder `key_database_manager`) or the Terminal Application (under the folder `ta_key_database_manager`)
 
 ## Running it from source:
 
