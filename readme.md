@@ -22,9 +22,9 @@ For bulk updates a `.csv` file must be provided, with the following configuratio
 | Unique Couplet Name 1 | 0 | 1 | 01 |
 | Unique Couplet Name 2 | 10 | NA | NULL |
 
-Accepted values are: 0, 1, 01, 10, NA and NULL
+**Accepted values are: 0, 1, 01, 10, NA and NULL**
 
-  *Attention: if typing 01 in a spreadsheet software, make sure it does not turn into a 1 (due to automatic number formatting); alternatively, you may type 10 instead, as the Not-a-Key program will not differentiate between the two formats*
+\t *Attention: if typing 01 in a spreadsheet software, make sure it does not turn into a 1 (due to automatic number formatting); alternatively, you may type 10 instead, as the Not-a-Key program will not differentiate between the two formats.*
 
 ## How to get it:
 
