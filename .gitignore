@@ -18,6 +18,7 @@ trash
 *.sh
 *.log
 *.jar
+*.csv
 
 # private files
 config/*.config

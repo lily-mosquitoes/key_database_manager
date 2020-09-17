@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(901, 668)
+        MainWindow.resize(901, 690)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
@@ -248,7 +248,10 @@ class Ui_MainWindow(object):
         MainWindow.setMenuBar(self.menuBar)
         self.action_change_my_password = QtWidgets.QAction(MainWindow)
         self.action_change_my_password.setObjectName("action_change_my_password")
+        self.action_bulk_update = QtWidgets.QAction(MainWindow)
+        self.action_bulk_update.setObjectName("action_bulk_update")
         self.menuChange_Password.addAction(self.action_change_my_password)
+        self.menuChange_Password.addAction(self.action_bulk_update)
         self.menuBar.addAction(self.menuChange_Password.menuAction())
 
         self.retranslateUi(MainWindow)
@@ -274,4 +277,5 @@ class Ui_MainWindow(object):
         self.pushButton_nextSpecies.setText(_translate("MainWindow", "Next species"))
         self.menuChange_Password.setTitle(_translate("MainWindow", "Actions"))
         self.action_change_my_password.setText(_translate("MainWindow", "Change my password"))
+        self.action_bulk_update.setText(_translate("MainWindow", "Bulk update (from .csv)"))
 

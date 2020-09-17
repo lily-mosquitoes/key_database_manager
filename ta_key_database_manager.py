@@ -86,7 +86,7 @@ def set_config_keybindings(term, config, config_path):
         pass
     else:
         config.add_section('keybindings')
-    for i in [('ChangePassword', 'P'), ('NextCouplet', 's'), ('PreviousCouplet', 'a'), ('NextSpecies', 'x'), ('PreviousSpecies', 'z'), ('Update', 'ENTER'), ('Confirm', 'ENTER'), ('Quit', 'q')]:
+    for i in [('ChangePassword', 'P'), ('BulkUpdate', 'B'), ('NextCouplet', 's'), ('PreviousCouplet', 'a'), ('NextSpecies', 'x'), ('PreviousSpecies', 'z'), ('Update', 'ENTER'), ('Confirm', 'ENTER'), ('Quit', 'q')]:
         term.clear()
         y, x = wrapstr(term, 4, tab, 'please configure your key bindings', curses.A_BOLD)
         y, x = wrapstr(term, y+1, tab, "please don't resize this window", curses.A_DIM)
@@ -116,6 +116,7 @@ def read_config(term, config_path):
         config.read(config_path)
         keybindings = {
             'ChangePassword': int(config.get('keybindings', 'ChangePassword')),
+            'BulkUpdate': int(config.get('keybindings', 'BulkUpdate')),
             'NextCouplet': int(config.get('keybindings', 'NextCouplet')),
             'PreviousCouplet': int(config.get('keybindings', 'PreviousCouplet')),
             'NextSpecies': int(config.get('keybindings', 'NextSpecies')),
@@ -129,6 +130,7 @@ def read_config(term, config_path):
         config.read(config_path)
         keybindings = {
             'ChangePassword': int(config.get('keybindings', 'ChangePassword')),
+            'BulkUpdate': int(config.get('keybindings', 'BulkUpdate')),
             'NextCouplet': int(config.get('keybindings', 'NextCouplet')),
             'PreviousCouplet': int(config.get('keybindings', 'PreviousCouplet')),
             'NextSpecies': int(config.get('keybindings', 'NextSpecies')),
@@ -185,6 +187,161 @@ def change_current_user_password(term, db, config_path):
         y, x = wrapstr(term, y+2, tab, "passwords don't match!", curses.color_pair(3))
     term.getch()
 
+def get_bulk_update_file(term, db):
+    tab = 8
+    term.clear()
+    # message
+    y, x = wrapstr(term, 2, tab, "Inform the file path (must be .csv)", curses.A_BOLD)
+    y, x = wrapstr(term, y+1, tab, "please don't resize this window", curses.A_DIM)
+    # get path
+    y, x = wrapstr(term, y+2, tab, "path:")
+    curses.echo()
+    curses.curs_set(1)
+    path = term.getstr(y, x+1).decode('utf-8')
+    curses.noecho()
+    curses.curs_set(0)
+    if os.path.exists(path):
+        bulk_update(term, db, path)
+    else:
+        y, x = wrapstr(term, y+2, tab, "couldn't find path '{}'".format(path))
+        y, x = wrapstr(term, y+2, tab, "press any key to exit")
+        term.getch()
+
+def import_bulk_update_file(path):
+    file = open(path, 'rt').read().strip().split('\n')
+    species = file.pop(0).split(',')[1:]
+    couplets = list()
+    states = list()
+    for line in file:
+        l = line.split(',')
+        cp_name = l.pop(0)
+        couplets.append(cp_name)
+        states.append(l.copy())
+    return couplets, species, states
+
+def bulk_update(term, db, path):
+    # variables for report
+    report = {
+        'couplets_updated': set(),
+        'species_updated': set(),
+        'couplets_not_found': set(),
+        'species_not_found': set(),
+        'total_states_updated': 0,
+        'total_states_not_updated': 0,
+    }
+    #
+    tab = 8
+    while True:
+        term.clear()
+        couplets, species, states = import_bulk_update_file(path)
+        for cp in couplets:
+            # progress message
+            term.clear()
+            y, x = wrapstr(term, 2, tab, "updating couplets... {}/{}".format(str(couplets.index(cp)), str(len(couplets))), curses.A_BOLD)
+            # input validation
+            db_couplets = db.db.list_couplets()
+            if cp not in db_couplets:
+                report['couplets_not_found'].add(cp)
+                continue
+            else:
+                pass
+            for sp in species:
+                # progress message
+                term.clear()
+                y, x = wrapstr(term, 2, tab, "updating couplets... {}/{}".format(str(couplets.index(cp)), str(len(couplets))), curses.A_BOLD)
+                y, x = wrapstr(term, y+2, tab, "updating species... {}/{}".format(str(species.index(sp)), str(len(species))), curses.A_BOLD)
+                # input validation
+                db_species = db.db.list_species()
+                if sp not in db_species:
+                    report['species_not_found'].add(sp)
+                    continue
+                else:
+                    pass
+                # since couplet and species names are unique
+                value = states[couplets.index(cp)][species.index(sp)]
+                # get current state on database
+                db_value = db.db.show_state(species=sp, couplet=cp)
+                if value == db_value:
+                    # do nothing
+                    report['total_states_not_updated'] += 1
+                elif db_value == None:
+                    try:
+                        db.db.update(species=sp, value=value, couplet=cp)
+                        report['couplets_updated'].add(cp)
+                        report['species_updated'].add(sp)
+                        report['total_states_updated'] += 1
+                    except pymysql.Error as e:
+                        # print report
+                        term.clear()
+                        y = 1
+                        for k, v in report.items():
+                            if type(v) == set:
+                                v = len(v)
+                            y, x = wrapstr(term, y+2, tab+4, "{}: {}".format(k, srt(v)))
+                        y, x = wrapstr(term, y+2, tab, "AN ERROR OCCURED", curses.A_BOLD | curses.color_pair(3))
+                        y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(3))
+                        while True:
+                            key = term.getch()
+                            if key == curses.KEY_RESIZE:
+                                continue # this deals with resizing the terminal window
+                            else:
+                                connection_error_handler(term, e)
+                elif value != db_value and db_value != None:
+                    while True:
+                        y += 1
+                        y, x = wrapstr(term, y+1, tab, "are you sure you want to change this value?", curses.A_BOLD | curses.color_pair(3))
+                        y, x = wrapstr(term, y+2, tab+4, "couplet: {}".format(cp))
+                        y, x = wrapstr(term, y+2, tab+4, "species: {}".format(sp))
+                        y, x = wrapstr(term, y+2, tab+8, "from {} to {}".format(db_value, value))
+                        y, x = wrapstr(term, y+2, tab, "press 'y' to confirm, or any key to skip")
+                        key = term.getch()
+                        if key == ord('y'):
+                            try:
+                                db.db.update(species=sp, value=value, couplet=cp)
+                                report['couplets_updated'].add(cp)
+                                report['species_updated'].add(sp)
+                                report['total_states_updated'] += 1
+                                y, x = wrapstr(term, y+2, tab, "updated!", curses.color_pair(2))
+                                break
+                            except pymysql.Error as e:
+                                # print report
+                                term.clear()
+                                y = 1
+                                for k, v in report.items():
+                                    if type(v) == set :
+                                        v = len(v)
+                                    y, x = wrapstr(term, y+2, tab+4, "{}: {}".format(k, srt(v)))
+                                y, x = wrapstr(term, y+2, tab, "AN ERROR OCCURED", curses.A_BOLD | curses.color_pair(3))
+                                y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(3))
+                                while True:
+                                    key = term.getch()
+                                    if key == curses.KEY_RESIZE:
+                                        continue # this deals with resizing the terminal window
+                                    else:
+                                        connection_error_handler(term, e)
+                        elif key == curses.KEY_RESIZE:
+                            continue # this deals with resizing the terminal window
+                        else:
+                            # skipped
+                            report['total_states_not_updated'] += 1
+                            break
+        # print report
+        term.clear()
+        y, x = wrapstr(term, 2, tab, "Bulk update finished", curses.A_BOLD | curses.color_pair(2))
+        y += 1
+        for k, v in report.items():
+            if type(v) == set :
+                v = len(v)
+            y, x = wrapstr(term, y+1, tab+4, "{}: {}".format(k, str(v)))
+        y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(2))
+        while True:
+            key = term.getch()
+            if key == curses.KEY_RESIZE:
+                continue # this deals with resizing the terminal window
+            else:
+                break
+        break
+
 def connection_error_handler(term, e):
     tab = 8
     while True:
@@ -223,6 +380,7 @@ def main(term):
         # reading config
         user, host, passwd, keybindings = read_config(term, config_path)
         CHANGE_PASSWORD = keybindings['ChangePassword']
+        BULK_UPDATE = keybindings['BulkUpdate']
         NEXT_C = keybindings['NextCouplet']
         PREV_C = keybindings['PreviousCouplet']
         NEXT_S = keybindings['NextSpecies']
@@ -283,7 +441,7 @@ def main(term):
             connection_error_handler(term, e)
         #
         # display actions
-        y, x = wrapstr(term, 2, tab, '({}) change password'.format(readkey(CHANGE_PASSWORD)), curses.A_DIM)
+        y, x = wrapstr(term, 2, tab, 'actions: ({}) change password    ({}) bulk update'.format(readkey(CHANGE_PASSWORD), readkey(BULK_UPDATE)), curses.A_DIM)
         #
         # display db info
         y, x = wrapstr(term, y+2, tab, 'current couplet: {}'.format(couplet))
@@ -305,6 +463,8 @@ def main(term):
         #
         if key == CHANGE_PASSWORD:
             change_current_user_password(term, db, config_path)
+        elif key == BULK_UPDATE:
+            get_bulk_update_file(term, db)
         elif key == NEXT_C:
             if db.cp_index < len(db.select_couplets)-1:
                 db.cp_index += 1

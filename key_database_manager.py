@@ -4,6 +4,7 @@ import configparser
 from PyQt5 import QtWidgets, uic, QtGui
 from ui_files.login_window import Ui_Dialog as Ui_LoginWindow
 from ui_files.config_window import Ui_Dialog as Ui_ConfigWindow
+from ui_files.report_window import Ui_Dialog as Ui_ReportWindow
 from ui_files.main_window import Ui_MainWindow
 from models.model_dataset import ModelDataset
 
@@ -187,6 +188,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         #
         # change password action
         self.action_change_my_password.triggered.connect(self.onChangeMyPassword)
+        #
+        # bulk update action
+        self.action_bulk_update.triggered.connect(self.onBulkUpdate)
 
     def fetch_select_couplets(self, config):
         file = open(config.get('filter files', 'Couplets')).read().strip().split('\n')
@@ -276,14 +280,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             connection_error_handler(e)
 
     def onChangeMyPassword(self):
-
         text = self.get_new_password("Type a new password")
-
+        #
         if text == None:
             pass
         else:
             text2 = self.get_new_password("Please type again")
-
+            #
             if text == text2:
                 self.change_current_user_password(text)
             else:
@@ -291,6 +294,226 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 msg.setIcon(QtWidgets.QMessageBox.Warning)
                 msg.setText("Passwords don't match!")
                 msg.exec_()
+
+    def onBulkUpdate(self):
+        # get path
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open CSV file for bulk update', '', 'CSV files (*.csv)', options=QtWidgets.QFileDialog.DontUseNativeDialog) # not using the native dialog to avoid a Gtk error message related to a Qt bug if I understood it correctly
+        if os.path.exists(path) and path.endswith('.csv'):
+            rw = ReportWindow(path, self.db)
+            rw.exec_()
+        else:
+            pass
+
+
+class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
+    def __init__(self, path, db, *args, obj=None, **kwargs):
+        super(ReportWindow, self).__init__(*args, **kwargs)
+        self.setupUi(self)
+        #
+        # set no close
+        self._want_to_close = False
+        #
+        # database
+        self.db = db
+        #
+        # variables for report
+        self.report = {
+            'couplets_updated': set(),
+            'species_updated': set(),
+            'couplets_not_found': set(),
+            'species_not_found': set(),
+            'total_states_updated': 0,
+            'total_states_not_updated': 0,
+        }
+        self.couplets, self.species, self.states = self.import_bulk_update_file(path)
+        #
+        self.update_list = list()
+        for cp in self.couplets:
+            for sp in self.species:
+                d = {
+                    'couplet': {
+                        'name': cp,
+                        'index': self.couplets.index(cp),
+                    },
+                    'species': {
+                        'name': sp,
+                        'index': self.species.index(sp),
+                    },
+                }
+                self.update_list.append(d)
+        # self.update_list = iter(self.update_list)
+        #
+        self.input_flag = False
+        self.end_flag = False
+        self.error_flag = False
+        #
+        # input validation
+        self.db_couplets = self.db.list_couplets()
+        self.db_species = self.db.list_species()
+        #
+        # display message
+        self.message = ''
+        #
+        while self.end_flag == False:
+            self.mainLoop()
+        #
+        # end
+        self.label_report.setText(self.message)
+        self.pushButton_ok.setEnabled(True)
+        self._want_to_close = True
+        self.pushButton_ok.pressed.connect(self.close)
+
+    # overwrite closeEvent to exit on manual close,
+    # but proceed normally on button press (sets _want_to_close)
+    def closeEvent(self, evnt):
+        if self._want_to_close:
+            # use closeEvent from parent class
+            super(ReportWindow, self).closeEvent(evnt)
+        else:
+            # ignore close event
+            evnt.ignore()
+
+    def mainLoop(self):
+        #
+        confirmed = self.get_current_pair()
+        self.label_report.setText(self.message)
+        self.onUpdate(confirmed)
+
+    def import_bulk_update_file(self, path):
+        file = open(path, 'rt').read().strip().split('\n')
+        species = file.pop(0).split(',')[1:]
+        couplets = list()
+        states = list()
+        for line in file:
+            l = line.split(',')
+            cp_name = l.pop(0)
+            couplets.append(cp_name)
+            states.append(l.copy())
+        return couplets, species, states
+
+    def get_current_pair(self):
+        if len(self.update_list) > 0:
+            #
+            self.update_pair = self.update_list.pop(0)
+            #
+            if self.update_pair['couplet']['name'] not in self.db_couplets:
+                #
+                self.report['couplets_not_found'].add(self.update_pair['couplet']['name'])
+                #
+                self.message = "updating couplets... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets))
+                #
+                return None
+            #
+            elif self.update_pair['species']['name'] not in self.db_species:
+                #
+                self.report['species_not_found'].add(self.update_pair['species']['name'])
+                #
+                self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
+                #
+                return None
+            else:
+                # get state value on csv
+                self.update_value = self.states[self.update_pair['couplet']['index']][self.update_pair['species']['index']]
+                # get current state on database
+                db_value = self.db.show_state(species=self.update_pair['species']['name'], couplet=self.update_pair['couplet']['name'])
+                #
+                if self.update_value == db_value:
+                    #
+                    self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
+                    #
+                    return False # confirm update == False
+                #
+                elif db_value == None:
+                    #
+                    self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
+                    #
+                    return True # confirm update == True
+                #
+                elif self.update_value != db_value and db_value != None:
+                    message = """
+                        are you sure you want to change this value?
+
+                            couplet: {}
+
+                            species: {}
+
+                            from {} to {}
+
+                        press 'Yes' to confirm, or 'No' to skip
+                    """.format(self.update_pair['couplet']['name'], self.update_pair['species']['name'], db_value, self.update_value)
+                    #
+                    dlg = ConfirmUpdate(message)
+                    result = dlg.exec_()
+                    if result:
+                        #
+                        self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
+                        #
+                        return True # confirm update == True
+                    else:
+                        #
+                        self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
+                        #
+                        return False # confirm update == False
+        #
+        else:
+            # print report
+            self.message = 'Bulk update finished\n'
+            self.message += self.print_report()
+            self.end_flag = True
+            return None
+
+    def print_report(self):
+        # make report string
+        message = ''
+        for k, v in self.report.items():
+            if type(v) == set:
+                v = len(v)
+            message += "    {}: {}\n".format(k, str(v))
+        return message
+
+    def display_error(self, e):
+        # print report
+        message = self.print_report()
+        message += "AN ERROR OCCURED"
+        self.label_report.setText(message)
+        self.pushButton_ok.setEnabled(True)
+        self.pushButton_ok.pressed.connect(lambda: connection_error_handler(e))
+
+    def onUpdate(self, confirmed):
+        if confirmed == True:
+            try:
+                self.db.update(species=self.update_pair['species']['name'], value=self.update_value, couplet=self.update_pair['couplet']['name'])
+                self.report['couplets_updated'].add(self.update_pair['couplet']['name'])
+                self.report['species_updated'].add(self.update_pair['species']['name'])
+                self.report['total_states_updated'] += 1
+            except Exception as e:
+                self.display_error(e)
+        elif confirmed == False:
+            self.report['total_states_not_updated'] += 1
+        elif confirmed == None:
+            pass
+
+
+class ConfirmUpdate(QtWidgets.QDialog):
+
+    def __init__(self, message, *args, **kwargs):
+        super(ConfirmUpdate, self).__init__(*args, **kwargs)
+
+        self.setWindowTitle("Confirm update")
+
+        QBtn = QtWidgets.QDialogButtonBox.Yes | QtWidgets.QDialogButtonBox.No
+
+        self.buttonBox = QtWidgets.QDialogButtonBox(QBtn)
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.labelMessage = QtWidgets.QLabel()
+        self.labelMessage.setText(message)
+
+        self.layout = QtWidgets.QVBoxLayout()
+        self.layout.addWidget(self.labelMessage)
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
 
 
 ###

@@ -23,6 +23,7 @@ class Ui_Dialog(object):
         self.label_info.setFont(font)
         self.label_info.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.label_info.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
+        self.label_info.setWordWrap(True)
         self.label_info.setObjectName("label_info")
         self.verticalLayout.addWidget(self.label_info, 0, QtCore.Qt.AlignHCenter)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
