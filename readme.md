@@ -1,7 +1,7 @@
 # Key Database Manager
 
 ![tests](https://github.com/lily-mosquitoes/key_database_manager/workflows/tests/badge.svg)
-![release](https://img.shields.io/github/v/release/lily-mosquitoes/key_database_manager?include_prereleases)
+[![release](https://img.shields.io/github/v/release/lily-mosquitoes/key_database_manager?include_prereleases)](https://github.com/lily-mosquitoes/key_database_manager/releases)
 
 Key Database Manager is a tool developed to help build and maintain a the `key_database`, a database intended to be used with the **Not a Key** project. Not a Key is an identification tool, similar to a dichotomous key, but *dynamic*. This tool is being developed to aid with mosquito (Diptera: Culicidae) identification by non-specialists.
 
@@ -11,13 +11,26 @@ For use, the applications (both GUI and TA) require the input of the User, Host 
 
 The Terminal Application also accepts custom configuration for its key bindings, which you can set at runtime.
 
-## Changes:
+## Features:
 
-The applications were changed to set up the `.config` file at runtime, you may change the configurations from within the applications at any time; if you must completely reset configurations simply delete the file; do not manually change it.
+An 'actions' menu was introduced, there you can change your current password (the `.config` file will be automatically updated accordingly) and perform bulk updates of characters.
 
-The key bindings stored in the `.config` file for the TA were changed to non-human-readable format (key codes from the python `ord()` function). This was done to simplify coding, since the file isn't supposed to be manually edited anymore.
+For bulk updates a `.csv` file must be provided, with the following configuration:
 
-## Running it:
+|  | Unique Species Name A | Unique Species Name B | Unique Species Name C |
+|-|-|-|-|
+| Unique Couplet Name 1 | 0 | 1 | 01 |
+| Unique Couplet Name 2 | 10 | NA | NULL |
+
+Accepted values are: 0, 1, 01, 10, NA and NULL
+
+  *Attention: if typing 01 in a spreadsheet software, make sure it does not turn into a 1 (due to automatic number formatting); alternatively, you may type 10 instead, as the Not-a-Key program will not differentiate between the two formats*
+
+## How to get it:
+
+Click on [releases](https://github.com/lily-mosquitoes/key_database_manager/releases) and you will find a set of `.zip` files under 'assets'. Download the `.zip` file corresponding to your system, unzip it and run the executable from either the GUI Application (under the folder `key_database_manager`) or the Terminal Application (under the folder `ta_key_database_manager`)
+
+## Running it from source:
 
 Install the requirements:
 `python3 -m pip install -r requirements.txt`
