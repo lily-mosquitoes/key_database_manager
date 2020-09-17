@@ -40,3 +40,9 @@ To run the GUI Application:
 
 To run the Terminal Application:
 `python3 ta_key_database_manager.py`
+
+## Acknowledgments
+
+Special thanks to Lyric Bartholomay, Chris Stone, Andrew Mackay and Corrado for supporting the project, and to Andrew Mackay and Corrado for testing the previous release and providing feedback.
+
+Thanks to the [Midwest Center of Excellence for Vector-Borne Disease](http://mcevbd.wisc.edu/about) for providing financial support for the Not a Key project.
