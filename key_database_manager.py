@@ -1,7 +1,7 @@
 import sys
 import os
 import configparser
-from PyQt5 import QtWidgets, uic, QtGui
+from PyQt5 import QtWidgets
 from ui_files.login_window import Ui_Dialog as Ui_LoginWindow
 from ui_files.config_window import Ui_Dialog as Ui_ConfigWindow
 from ui_files.report_window import Ui_Dialog as Ui_ReportWindow
@@ -10,8 +10,8 @@ from models.model_dataset import ModelDataset
 
 
 class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
-    def __init__(self, config_path, *args, obj=None, **kwargs):
-        super(LoginWindow, self).__init__(*args, **kwargs)
+    def __init__(self, config_path):
+        super(LoginWindow, self).__init__()
         self.setupUi(self)
         #
         self.config_path = config_path
@@ -98,8 +98,8 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
 
 
 class ConfigWindow(QtWidgets.QDialog, Ui_ConfigWindow):
-    def __init__(self, config_path, *args, obj=None, **kwargs):
-        super(ConfigWindow, self).__init__(*args, **kwargs)
+    def __init__(self, config_path):
+        super(ConfigWindow, self).__init__()
         self.setupUi(self)
         #
         # get input
@@ -134,8 +134,8 @@ class ConfigWindow(QtWidgets.QDialog, Ui_ConfigWindow):
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
-    def __init__(self, *args, obj=None, **kwargs):
-        super(MainWindow, self).__init__(*args, **kwargs)
+    def __init__(self):
+        super(MainWindow, self).__init__()
         self.setupUi(self)
         #
         # login
@@ -306,8 +306,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
-    def __init__(self, path, db, *args, obj=None, **kwargs):
-        super(ReportWindow, self).__init__(*args, **kwargs)
+    def __init__(self, path, db):
+        super(ReportWindow, self).__init__()
         self.setupUi(self)
         #
         # set no close
@@ -496,8 +496,8 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
 
 class ConfirmUpdate(QtWidgets.QDialog):
 
-    def __init__(self, message, *args, **kwargs):
-        super(ConfirmUpdate, self).__init__(*args, **kwargs)
+    def __init__(self, message):
+        super(ConfirmUpdate, self).__init__()
 
         self.setWindowTitle("Confirm update")
 
@@ -524,7 +524,7 @@ def connection_error_handler(e):
     sys.exit(error_dialog.exec_())
 
 def main():
-    app = QtWidgets.QApplication(sys.argv)
+    app = QtWidgets.QApplication([])
     main = MainWindow()
     main.show()
     sys.exit(app.exec_())
