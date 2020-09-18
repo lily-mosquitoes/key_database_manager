@@ -259,7 +259,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Key Database Manager"))
         self.label_couplet.setText(_translate("MainWindow", "Couplet name: "))
         self.label.setText(_translate("MainWindow", "0. "))
         self.label_zero.setText(_translate("MainWindow", "TextLabel"))

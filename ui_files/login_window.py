@@ -97,7 +97,7 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        Dialog.setWindowTitle(_translate("Dialog", "Login - Key Database Manager"))
         self.label_info.setText(_translate("Dialog", "Current Login Info:"))
         self.pushButton_setCoupletFilter.setText(_translate("Dialog", "Set Couplet Filter"))
         self.label_coupletFile.setText(_translate("Dialog", "TextLabel"))
