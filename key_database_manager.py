@@ -17,112 +17,187 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
         self.config_path = config_path
         # read config file
         try:
-            self.user, self.host, self.passwd, self.couplet_filter, self.species_filter = self.read_config()
+            self.login_dict = self.read_login_config()
         except Exception:
-            config = ConfigWindow(self.config_path)
+            config = ConfigWindow(config_path=self.config_path)
             config.exec_()
-            self.user, self.host, self.passwd, self.couplet_filter, self.species_filter = self.read_config()
+            self.login_dict = self.read_login_config()
         #
         self.UiComponents()
 
     def UiComponents(self):
         #
-        self.label_info.setText('Current login info:\n\n    User: {}\n\n    Host: {}\n\n'.format(self.user, self.host))
-        self.label_info.repaint() #repaint for MacOS
+        self.comboBox_loginAs.addItems(self.login_dict.keys())
+        self.comboBox_loginAs.repaint() #repaint for MacOS
         #
-        self.label_coupletFile.setText(self.couplet_filter.split(os.path.sep)[-1])
-        self.label_coupletFile.repaint() #repaint for MacOS
+        self.onLoginAs()
         #
-        self.label_speciesFile.setText(self.species_filter.split(os.path.sep)[-1])
-        self.label_speciesFile.repaint() #repaint for MacOS
+        self.comboBox_loginAs.currentIndexChanged.connect(self.onLoginAs)
         #
+        # read filter config
+        self.showFilters()
         #
         self.pushButton_login.setFocus()
         #
         self.pushButton_setCoupletFilter.pressed.connect(self.setCoupletFilter)
         self.pushButton_setSpeciesFilter.pressed.connect(self.setSpeciesFilter)
         #
+        self.pushButton_addLogin.pressed.connect(self.addLogin)
         self.pushButton_changeLoginInfo.pressed.connect(self.changeLoginInfo)
         self.pushButton_login.pressed.connect(self.db_connect)
 
     def db_connect(self):
-        try:
-            self.db = ModelDataset(user=self.user, host=self.host, password=self.passwd, db='key_database')
-        except Exception as e:
-            connection_error_handler(e)
-        self.hide()
+        # read filters first
+        couplet_filter, species_filter = self.read_filter_config()
+        if os.path.exists(couplet_filter) and os.path.exists(species_filter):
+            try:
+                self.db = ModelDataset(user=self.login_dict[self.current_login]['user'], host=self.login_dict[self.current_login]['host'], password=self.login_dict[self.current_login]['password'], db=self.login_dict[self.current_login]['database'])
+            except Exception as e:
+                connection_error_handler(e)
+            self.hide()
+        else:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setText("Please set valid filters!")
+            msg.exec_()
+
+    def showFilters(self):
+        #
+        couplet_filter, species_filter = self.read_filter_config()
+        #
+        self.label_coupletFile.setText(couplet_filter.split(os.path.sep)[-1])
+        self.label_coupletFile.repaint() #repaint for MacOS
+        #
+        self.label_speciesFile.setText(species_filter.split(os.path.sep)[-1])
+        self.label_speciesFile.repaint() #repaint for MacOS
+
+    def onLoginAs(self):
+        #
+        self.current_login = self.comboBox_loginAs.currentText()
+        #
+        self.label_info.setText('Current login info:\n\n    User: {}\n\n    Host: {}\n\n    Password: {}\n\n    Database: {}'.format(self.login_dict[self.current_login]['user'], self.login_dict[self.current_login]['host'], '•'*len(self.login_dict[self.current_login]['password']), self.login_dict[self.current_login]['database']))
+        self.label_info.repaint() #repaint for MacOS
+
+    def addLogin(self):
+        config = ConfigWindow(config_path=self.config_path)
+        config.exec_()
+        self.login_dict = self.read_login_config()
+        self.comboBox_loginAs.addItem(config.login_text)
+        self.comboBox_loginAs.repaint() #repaint for MacOS
 
     def changeLoginInfo(self):
-        config = ConfigWindow(self.config_path)
+        config = ConfigWindow(config_path=self.config_path, change='login: {}'.format(self.current_login))
         config.exec_()
-        self.user, self.host, self.passwd, self.couplet_filter, self.species_filter = self.read_config()
-        self.UiComponents()
+        self.login_dict = self.read_login_config()
+        self.comboBox_loginAs.setCurrentText(config.login_text)
+        self.comboBox_loginAs.repaint() #repaint for MacOS
 
     def setCoupletFilter(self):
         couplet_filter, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open couplets file', '', 'Text files (*.txt)', options=QtWidgets.QFileDialog.DontUseNativeDialog) # not using the native dialog to avoid a Gtk error message related to a Qt bug if I understood it correctly
         config = configparser.ConfigParser()
         config.read(self.config_path)
-        config.set('filter files', 'Couplets', couplet_filter)
+        #
+        sections = config.sections()
+        if 'filter files' not in sections:
+            config.add_section('filter files')
+        config.set('filter files', 'couplets', couplet_filter)
         with open(self.config_path, 'w') as configfile:
             config.write(configfile)
-        self.label_coupletFile.setText(couplet_filter.split(os.path.sep)[-1])
-        self.label_coupletFile.repaint() #repaint for MacOS
+        self.showFilters()
 
     def setSpeciesFilter(self):
         species_filter, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open species file', '', 'Text files (*.txt)', options=QtWidgets.QFileDialog.DontUseNativeDialog) # not using the native dialog to avoid a Gtk error message related to a Qt bug if I understood it correctly
         config = configparser.ConfigParser()
         config.read(self.config_path)
-        config.set('filter files', 'Species', species_filter)
+        #
+        sections = config.sections()
+        if 'filter files' not in sections:
+            config.add_section('filter files')
+        config.set('filter files', 'species', species_filter)
         with open(self.config_path, 'w') as configfile:
             config.write(configfile)
-        self.label_speciesFile.setText(species_filter.split(os.path.sep)[-1])
-        self.label_speciesFile.repaint() #repaint for MacOS
+        self.showFilters()
 
-    def read_config(self):
+    def read_login_config(self):
         config = configparser.ConfigParser()
         try:
             config.read(self.config_path)
-            user = config.get('mosquito database', 'User')
-            host = config.get('mosquito database', 'Host')
-            passwd = config.get('mosquito database', 'Password')
+            sections = config.sections()
+            if sections == [] or [i for i in sections if 'login: ' in i] == []:
+                raise Exception
+            else:
+                pass
             #
-            couplet_filter = config.get('filter files', 'Couplets')
-            species_filter = config.get('filter files', 'Species')
+            login_dict = dict()
+            for login in [i for i in sections if 'login: ' in i]:
+                # this seems useless but it will catch if a user accidentally deletes a line from the config file
+                l = {
+                    'user': config.get(login, 'user'),
+                    'host': config.get(login, 'host'),
+                    'password': config.get(login, 'password'),
+                    'database': config.get(login, 'database'),
+                }
+                login_dict[login.strip('login: ')] = l
         except Exception:
             raise Exception('config file not correctly set up')
         #
-        return user, host, passwd, couplet_filter, species_filter
+        return login_dict
+
+    def read_filter_config(self):
+        config = configparser.ConfigParser()
+        config.read(self.config_path)
+        try:
+            couplet_filter = config.get('filter files', 'couplets')
+        except Exception:
+            couplet_filter = ''
+        try:
+            species_filter = config.get('filter files', 'species')
+        except Exception:
+            species_filter = ''
+        #
+        return couplet_filter, species_filter
 
     def closeEvent(self, event):
         sys.exit(0)
 
 
 class ConfigWindow(QtWidgets.QDialog, Ui_ConfigWindow):
-    def __init__(self, config_path):
+    def __init__(self, config_path, change=None):
         super(ConfigWindow, self).__init__()
         self.setupUi(self)
         #
         # get input
+        self.change = change
         self.config_path = config_path
         self.pushButton_setLoginInfo.pressed.connect(self.write_congfig)
 
     def write_congfig(self):
-        # set up config file
         config = configparser.ConfigParser()
-        config['mosquito database'] = {
-            'User': self.user.text(),
-            'Host': self.host.text(),
-            'Password': self.password.text()
-        }
-        if 'filter files' in config:
+        #
+        if not os.path.exists(self.config_path):
             pass
         else:
-            config['filter files'] = {
-                'Couplets': os.path.join(os.path.dirname(sys.argv[0]), 'select', 'COUPLETS.txt'),
-                'Species': os.path.join(os.path.dirname(sys.argv[0]), 'select', 'SPECIES.txt'),
-            }
-        with open(self.config_path, 'w') as configfile:
-            config.write(configfile)
+            config.read(self.config_path)
+        # delete previous entry if given
+        if self.change:
+            config.remove_section(self.change)
+        # set up config file
+        self.login_text = 'login: {}@{}:{}'.format(self.user.text(), self.host.text(), self.database.text())
+        try:
+            config.add_section(self.login_text)
+            config.set(self.login_text, 'User', self.user.text())
+            config.set(self.login_text, 'Host', self.host.text())
+            config.set(self.login_text, 'Password', self.password.text())
+            config.set(self.login_text, 'Database', self.database.text())
+            #
+            with open(self.config_path, 'w') as configfile:
+                config.write(configfile)
+        #
+        except configparser.DuplicateSectionError:
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setText("Login already exists!")
+            msg.exec_()
         #
         self.hide()
 
