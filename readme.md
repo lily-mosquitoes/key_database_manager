@@ -19,11 +19,11 @@ Additionally, you must provide filter files for couplets and species present in 
 
 ## Features:
 
-Multiple logins: in the login screen you can add new login information or change your currently selected login information. This allows for access to multiple databases with the same user, as well as multiple user access in the same device.
+**Multiple logins:** in the login screen you can add new login information or change your currently selected login information. This allows for access to multiple databases with the same user, as well as multiple user access in the same device.
 
-Password change: in the 'actions' menu, you may change your database access password, this will affect the database user credentials directly and it will subsequently update your configuration files. New passwords must be at least 8 characters long; you will be prompted to type your new password twice to avoid typing errors.
+**Password change:** in the 'actions' menu, you may change your database access password, this will affect the database user credentials directly and it will subsequently update your configuration files. New passwords must be at least 8 characters long; you will be prompted to type your new password twice to avoid typing errors.
 
-Bulk updates: in the 'actions' menu, you can perform bulk updates of characters using a `.csv` file. The provided `.csv` file must be in the following configuration:
+**Bulk updates:** in the 'actions' menu, you can perform bulk updates of characters using a `.csv` file. The provided `.csv` file must be in the following configuration:
 
 |  | Unique Species Name A | Unique Species Name B | Unique Species Name C |
 |-|-|-|-|
