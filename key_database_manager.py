@@ -15,24 +15,16 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
         self.setupUi(self)
         #
         self.config_path = config_path
-        # read config file
-        try:
-            self.login_dict = self.read_login_config()
-        except Exception:
-            config = ConfigWindow(config_path=self.config_path)
-            config.exec_()
-            self.login_dict = self.read_login_config()
         #
         self.UiComponents()
 
     def UiComponents(self):
         #
-        self.comboBox_loginAs.addItems(self.login_dict.keys())
-        self.comboBox_loginAs.repaint() #repaint for MacOS
+        self.showLogins()
         #
-        self.onLoginAs()
+        self.showLoginInfo()
         #
-        self.comboBox_loginAs.currentIndexChanged.connect(self.onLoginAs)
+        self.comboBox_loginAs.currentIndexChanged.connect(self.showLoginInfo)
         #
         # read filter config
         self.showFilters()
@@ -71,26 +63,51 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
         self.label_speciesFile.setText(species_filter.split(os.path.sep)[-1])
         self.label_speciesFile.repaint() #repaint for MacOS
 
-    def onLoginAs(self):
+    def showLogins(self):
+        # read config file
+        try:
+            self.login_dict = self.read_login_config()
+        except Exception:
+            config = ConfigWindow(config_path=self.config_path)
+            config.exec_()
+            self.login_dict = self.read_login_config()
+        #
+        self.comboBox_loginAs.addItems(self.login_dict.keys())
+        self.comboBox_loginAs.repaint() #repaint for MacOS
+
+    def showLoginInfo(self):
         #
         self.current_login = self.comboBox_loginAs.currentText()
         #
-        self.label_info.setText('Current login info:\n\n    User: {}\n\n    Host: {}\n\n    Password: {}\n\n    Database: {}'.format(self.login_dict[self.current_login]['user'], self.login_dict[self.current_login]['host'], '•'*len(self.login_dict[self.current_login]['password']), self.login_dict[self.current_login]['database']))
-        self.label_info.repaint() #repaint for MacOS
+        if self.current_login != '':
+            self.label_info.setText('Current login info:\n\n    User: {}\n\n    Host: {}\n\n    Password: {}\n\n    Database: {}'.format(self.login_dict[self.current_login]['user'], self.login_dict[self.current_login]['host'], '•'*len(self.login_dict[self.current_login]['password']), self.login_dict[self.current_login]['database']))
+            self.label_info.repaint() #repaint for MacOS
+        else:
+            self.label_info.setText('')
+            self.label_info.repaint() #repaint for MacOS
 
     def addLogin(self):
         config = ConfigWindow(config_path=self.config_path)
         config.exec_()
+        old_login_dict = self.login_dict.keys()
         self.login_dict = self.read_login_config()
-        self.comboBox_loginAs.addItem(config.login_text)
-        self.comboBox_loginAs.repaint() #repaint for MacOS
+        item_to_add = set(self.login_dict.keys()) - set(old_login_dict)
+        if len(item_to_add) > 0:
+            self.comboBox_loginAs.addItem(item_to_add.pop())
+            self.comboBox_loginAs.repaint()
+            self.comboBox_loginAs.setCurrentIndex(self.comboBox_loginAs.count()-1)
 
     def changeLoginInfo(self):
         config = ConfigWindow(config_path=self.config_path, change='login: {}'.format(self.current_login))
         config.exec_()
+        old_login_dict = self.login_dict.keys()
         self.login_dict = self.read_login_config()
-        self.comboBox_loginAs.setCurrentText(config.login_text)
-        self.comboBox_loginAs.repaint() #repaint for MacOS
+        item_to_add = set(self.login_dict.keys()) - set(old_login_dict)
+        if len(item_to_add) > 0:
+            self.comboBox_loginAs.removeItem(self.comboBox_loginAs.currentIndex())
+            self.comboBox_loginAs.addItem(item_to_add.pop())
+            self.comboBox_loginAs.repaint()
+            self.comboBox_loginAs.setCurrentIndex(self.comboBox_loginAs.count()-1)
 
     def setCoupletFilter(self):
         couplet_filter, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open couplets file', '', 'Text files (*.txt)', options=QtWidgets.QFileDialog.DontUseNativeDialog) # not using the native dialog to avoid a Gtk error message related to a Qt bug if I understood it correctly
@@ -137,7 +154,7 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
                     'password': config.get(login, 'password'),
                     'database': config.get(login, 'database'),
                 }
-                login_dict[login.strip('login: ')] = l
+                login_dict[login[7:]] = l
         except Exception:
             raise Exception('config file not correctly set up')
         #
@@ -169,9 +186,10 @@ class ConfigWindow(QtWidgets.QDialog, Ui_ConfigWindow):
         # get input
         self.change = change
         self.config_path = config_path
-        self.pushButton_setLoginInfo.pressed.connect(self.write_congfig)
+        self.pushButton_setLoginInfo.pressed.connect(self.write_config)
 
-    def write_congfig(self):
+    def write_config(self):
+        #
         config = configparser.ConfigParser()
         #
         if not os.path.exists(self.config_path):
