@@ -19,6 +19,13 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
         self.UiComponents()
 
     def UiComponents(self):
+        # tool button
+        self.menu = QtWidgets.QMenu()
+        self.actionAddLogin = QtWidgets.QAction('add login')
+        self.actionRemoveLogin = QtWidgets.QAction('remove login')
+        for item in [self.actionAddLogin, self.actionRemoveLogin]:
+            self.menu.addAction(item)
+        self.toolButton.setMenu(self.menu)
         #
         self.showLogins()
         #
@@ -34,7 +41,8 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
         self.pushButton_setCoupletFilter.pressed.connect(self.setCoupletFilter)
         self.pushButton_setSpeciesFilter.pressed.connect(self.setSpeciesFilter)
         #
-        self.pushButton_addLogin.pressed.connect(self.addLogin)
+        self.actionAddLogin.triggered.connect(self.addLogin)
+        self.actionRemoveLogin.triggered.connect(self.removeLogin)
         self.pushButton_changeLoginInfo.pressed.connect(self.changeLoginInfo)
         self.pushButton_login.pressed.connect(self.db_connect)
 
@@ -108,6 +116,26 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
             self.comboBox_loginAs.addItem(item_to_add.pop())
             self.comboBox_loginAs.repaint()
             self.comboBox_loginAs.setCurrentIndex(self.comboBox_loginAs.count()-1)
+
+    def removeLogin(self):
+        #
+        login_to_remove = self.comboBox_loginAs.currentText()
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
+        msg.setText(f'Are you sure you want to delete the login "{login_to_remove}"?')
+        msg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
+        choice = msg.exec_()
+        #
+        if choice == QtWidgets.QMessageBox.Yes:
+            config = configparser.ConfigParser()
+            config.read(self.config_path)
+            config.remove_section(f'login: {login_to_remove}')
+            with open(self.config_path, 'w') as configfile:
+                config.write(configfile)
+            #
+            self.login_dict = self.read_login_config()
+            self.comboBox_loginAs.removeItem(self.comboBox_loginAs.currentIndex())
+            self.comboBox_loginAs.repaint()
 
     def setCoupletFilter(self):
         couplet_filter, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open couplets file', '', 'Text files (*.txt)', options=QtWidgets.QFileDialog.DontUseNativeDialog) # not using the native dialog to avoid a Gtk error message related to a Qt bug if I understood it correctly
