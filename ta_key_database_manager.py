@@ -5,7 +5,7 @@ import os
 import configparser
 
 from models.model_dataset import ModelDataset
-from ta_functions import wrapstr, get_text, readkey, get_file, set_login_config, read_login_config, remove_login_config, set_filter_config, read_filter_config
+from ta_functions import wrapstr, get_text, readkey, get_file, set_login_config, read_login_config, remove_login_config
 
 
 class Signal(object):
@@ -14,6 +14,7 @@ class Signal(object):
         self.db = db
 
     def signal_handler(self, sig, frame):
+        
         self.db.connection.close()
         sys.exit(0)
 
@@ -228,9 +229,6 @@ def connection_error_handler(term, e):
 
 def login(term, config_path):
 
-    # highlight
-    # curses.init_pair(4, curses.COLOR_BLACK, curses.COLOR_MAGENTA)
-
     # set vars
     tab = 8
 
@@ -244,7 +242,7 @@ def login(term, config_path):
     term.clear()
 
     # message
-    message = "Use the up and down arrows to choose your login, press any key to login; press 'c' to change your selected login configuration, press 'n' to create a new login configuration, press 'r' to remove a login entry, press 'f' to set your filter files"
+    message = "Use the up and down arrows to choose your login, press any key to login; press 'c' to change your selected login configuration, press 'n' to create a new login configuration, press 'r' to remove a login entry"
     y, x = wrapstr(term, 2, tab, message, curses.A_BOLD)
 
     # set subwindows
@@ -256,10 +254,6 @@ def login(term, config_path):
 
     infowin = rectangle_2.subwin(5, max_cols, y+max_lines+6, tab+1)
 
-    rectangle_3 = term.subwin(4, max_cols+2, y+(2*max_lines)+4, tab)
-
-    filterwin = rectangle_3.subwin(3, max_cols, y+(2*max_lines)+5, tab+1)
-
     # confirm configuration
     while True:
 
@@ -267,9 +261,6 @@ def login(term, config_path):
         login_config_dict = read_login_config(term, config_path)
 
         login_list = [l for l in login_config_dict.keys()]
-
-        # reading filter config
-        filter_config = read_filter_config(term, config_path)
 
         # write on terminal
         term.clear()
@@ -282,9 +273,6 @@ def login(term, config_path):
 
         infowin.clear()
         rectangle_2.border()
-
-        filterwin.clear()
-        rectangle_3.border()
 
         y = x = 0
         for login in login_list[line_start:line_start+max_lines]:
@@ -299,11 +287,6 @@ def login(term, config_path):
         infowin.addstr(1, 0, 'host: {}'.format(login_config_dict[current_login]['host']))
         infowin.addstr(2, 0, 'password: {}'.format('•'*len(login_config_dict[current_login]['password'])))
         infowin.addstr(3, 0, 'database: {}'.format(login_config_dict[current_login]['database']))
-
-        cp_filter = filter_config['couplets'].split(os.path.sep)[-1]
-        sp_filter = filter_config['species'].split(os.path.sep)[-1]
-        filterwin.addstr(0, 0, 'couplet filter: {}'.format(cp_filter))
-        filterwin.addstr(1, 0, 'couplet filter: {}'.format(sp_filter))
 
         term.refresh()
         rectangle.refresh()
@@ -353,21 +336,12 @@ def login(term, config_path):
             cursor = 0
             line_start = 0
 
-        elif key == ord('f'):
-            set_filter_config(term, config_path)
-
         elif key == ord('q'):
             sys.exit(0)
 
         else:
-            if filter_config['couplets'] == '' or filter_config['species'] == '':
-                y, x = wrapstr(term, 24, tab, 'please set filter files before login!', curses.color_pair(3))
-
-                term.getch()
-
-            else:
-                current_login = login_list[line_start:line_start+max_lines][cursor]
-                return current_login, login_config_dict[current_login], filter_config
+            current_login = login_list[line_start:line_start+max_lines][cursor]
+            return current_login, login_config_dict[current_login]
 
 def main(term):
 
@@ -396,7 +370,7 @@ def main(term):
     config_path = os.path.join(os.path.dirname(sys.argv[0]), 'config', 'ta_key_data_manager.config')
 
     # get login vars
-    login_name, login_config, filter_config = login(term, config_path)
+    login_name, login_config = login(term, config_path)
 
     # clear terminal
     term.clear()
@@ -415,13 +389,9 @@ def main(term):
     except Exception as e:
         connection_error_handler(term, e)
 
-    # open filter files
-    cp_filter = open(filter_config['couplets'], 'rt').read().strip().split('\n')
-    sp_filter = open(filter_config['species'], 'rt').read().strip().split('\n')
-
-    # set filters
-    select_couplets = [c for c in db.list_couplets() if c in cp_filter]
-    select_species = [s for s in db.list_species() if s in sp_filter]
+    # read db couplets and species
+    db_couplets = db.list_couplets()
+    db_species = db.list_species()
 
     # set internal variables
     sp_index = 0
@@ -432,11 +402,11 @@ def main(term):
 
         term.clear()
 
-        # read db info
+        # read db info for current index
         try: # try to query the data
-            couplet = select_couplets[cp_index]
+            couplet = db_couplets[cp_index]
             zero_text, one_text = db.show_couplet(couplet)
-            species = select_species[sp_index]
+            species = db_species[sp_index]
             status = db.show_state(species, couplet)
         except Exception as e:
             connection_error_handler(term, e)
@@ -471,7 +441,7 @@ def main(term):
                 bulk_update(term, db, bulk_update_file)
 
         elif key == NEXT_C:
-            if cp_index < len(select_couplets)-1:
+            if cp_index < len(db_couplets)-1:
                 cp_index += 1
 
         elif key == PREV_C:
@@ -479,7 +449,7 @@ def main(term):
                 cp_index -= 1
 
         elif key == NEXT_S:
-            if sp_index < len(select_species)-1:
+            if sp_index < len(db_species)-1:
                 sp_index += 1
 
         elif key == PREV_S:

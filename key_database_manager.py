@@ -33,13 +33,7 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
         #
         self.comboBox_loginAs.currentIndexChanged.connect(self.showLoginInfo)
         #
-        # read filter config
-        self.showFilters()
-        #
         self.pushButton_login.setFocus()
-        #
-        self.pushButton_setCoupletFilter.pressed.connect(self.setCoupletFilter)
-        self.pushButton_setSpeciesFilter.pressed.connect(self.setSpeciesFilter)
         #
         self.actionAddLogin.triggered.connect(self.addLogin)
         self.actionRemoveLogin.triggered.connect(self.removeLogin)
@@ -47,29 +41,11 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
         self.pushButton_login.pressed.connect(self.db_connect)
 
     def db_connect(self):
-        # read filters first
-        couplet_filter, species_filter = self.read_filter_config()
-        if os.path.exists(couplet_filter) and os.path.exists(species_filter):
-            try:
-                self.db = ModelDataset(user=self.login_dict[self.current_login]['user'], host=self.login_dict[self.current_login]['host'], password=self.login_dict[self.current_login]['password'], db=self.login_dict[self.current_login]['database'])
-            except Exception as e:
-                connection_error_handler(e)
-            self.hide()
-        else:
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Warning)
-            msg.setText("Please set valid filters!")
-            msg.exec_()
-
-    def showFilters(self):
-        #
-        couplet_filter, species_filter = self.read_filter_config()
-        #
-        self.label_coupletFile.setText(couplet_filter.split(os.path.sep)[-1])
-        self.label_coupletFile.repaint() #repaint for MacOS
-        #
-        self.label_speciesFile.setText(species_filter.split(os.path.sep)[-1])
-        self.label_speciesFile.repaint() #repaint for MacOS
+        try:
+            self.db = ModelDataset(user=self.login_dict[self.current_login]['user'], host=self.login_dict[self.current_login]['host'], password=self.login_dict[self.current_login]['password'], db=self.login_dict[self.current_login]['database'])
+        except Exception as e:
+            connection_error_handler(e)
+        self.hide()
 
     def showLogins(self):
         # read config file
@@ -137,32 +113,6 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
             self.comboBox_loginAs.removeItem(self.comboBox_loginAs.currentIndex())
             self.comboBox_loginAs.repaint()
 
-    def setCoupletFilter(self):
-        couplet_filter, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open couplets file', '', 'Text files (*.txt)', options=QtWidgets.QFileDialog.DontUseNativeDialog) # not using the native dialog to avoid a Gtk error message related to a Qt bug if I understood it correctly
-        config = configparser.ConfigParser()
-        config.read(self.config_path)
-        #
-        sections = config.sections()
-        if 'filter files' not in sections:
-            config.add_section('filter files')
-        config.set('filter files', 'couplets', couplet_filter)
-        with open(self.config_path, 'w') as configfile:
-            config.write(configfile)
-        self.showFilters()
-
-    def setSpeciesFilter(self):
-        species_filter, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open species file', '', 'Text files (*.txt)', options=QtWidgets.QFileDialog.DontUseNativeDialog) # not using the native dialog to avoid a Gtk error message related to a Qt bug if I understood it correctly
-        config = configparser.ConfigParser()
-        config.read(self.config_path)
-        #
-        sections = config.sections()
-        if 'filter files' not in sections:
-            config.add_section('filter files')
-        config.set('filter files', 'species', species_filter)
-        with open(self.config_path, 'w') as configfile:
-            config.write(configfile)
-        self.showFilters()
-
     def read_login_config(self):
         config = configparser.ConfigParser()
         try:
@@ -187,20 +137,6 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
             raise Exception('config file not correctly set up')
         #
         return login_dict
-
-    def read_filter_config(self):
-        config = configparser.ConfigParser()
-        config.read(self.config_path)
-        try:
-            couplet_filter = config.get('filter files', 'couplets')
-        except Exception:
-            couplet_filter = ''
-        try:
-            species_filter = config.get('filter files', 'species')
-        except Exception:
-            species_filter = ''
-        #
-        return couplet_filter, species_filter
 
     def closeEvent(self, event):
         sys.exit(0)
@@ -279,18 +215,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def UiComponents(self):
         #
         # data query
-        self.db_species = self.db.list_species()
         self.db_couplets = self.db.list_couplets()
-        #
-        # filtering
-        config = configparser.ConfigParser()
-        config.read(self.config_path)
-        self.select_species = self.fetch_select_species(config)
-        self.select_couplets = self.fetch_select_couplets(config)
+        self.db_species = self.db.list_species()
         #
         # ui setup
-        self.comboBox_couplet.addItems(self.select_couplets)
-        self.comboBox_species.addItems(self.select_species)
+        self.comboBox_couplet.addItems(self.db_couplets)
+        self.comboBox_species.addItems(self.db_species)
         self.comboBox_status.addItems(['0', '1', '01', 'NA'])
         #
         self.onChoose()
@@ -312,16 +242,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         #
         # bulk update action
         self.action_bulk_update.triggered.connect(self.onBulkUpdate)
-
-    def fetch_select_couplets(self, config):
-        file = open(config.get('filter files', 'Couplets')).read().strip().split('\n')
-        select_couplets = [c for c in self.db_couplets if c in file]
-        return select_couplets
-
-    def fetch_select_species(self, config):
-        file = open(config.get('filter files', 'Species')).read().strip().split('\n')
-        select_species = [s for s in self.db_species if s in file]
-        return select_species
 
     def get_new_password(self, message):
         text, okPressed = QtWidgets.QInputDialog.getText(self, message,"New password:", QtWidgets.QLineEdit.Password, "")
@@ -369,9 +289,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.label_status.repaint() #repaint for MacOS
 
     def onCouplet(self, add):
-        c_couplet_index = self.select_couplets.index(self.c_couplet)
+        c_couplet_index = self.db_couplets.index(self.c_couplet)
         n_couplet_index = c_couplet_index + add
-        if n_couplet_index >= len(self.select_couplets) or n_couplet_index < 0:
+        if n_couplet_index >= len(self.db_couplets) or n_couplet_index < 0:
             pass # avoid index out of range
         else:
             self.comboBox_couplet.setCurrentIndex(n_couplet_index)
@@ -379,9 +299,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.onChoose()
 
     def onSpecies(self, add):
-        c_species_index = self.select_species.index(self.c_species)
+        c_species_index = self.db_species.index(self.c_species)
         n_species_index = c_species_index + add
-        if n_species_index >= len(self.select_species) or n_species_index < 0:
+        if n_species_index >= len(self.db_species) or n_species_index < 0:
             pass # avoid index out of range
         else:
             self.comboBox_species.setCurrentIndex(n_species_index)
