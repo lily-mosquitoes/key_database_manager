@@ -1,3 +1,3 @@
 from .display_functions import wrapstr, get_text, readkey
 from .filesystem_functions import get_file
-from .config_functions import set_login_config, read_login_config, remove_login_config
+from .credentials_functions import set_login_credential, read_users_storage, remove_login_credential
