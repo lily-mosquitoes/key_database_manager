@@ -2,10 +2,14 @@ import curses
 import signal
 import sys
 import os
-import configparser
+import platform
+
+import keyring
+from keyring.backends import OS_X, Windows
+from urllib.parse import urlparse
 
 from models.model_dataset import ModelDataset
-from ta_functions import wrapstr, get_text, readkey, get_file, set_login_config, read_login_config, remove_login_config
+from ta_functions import wrapstr, get_text, readkey, get_file, set_login_credential, read_users_storage, remove_login_credential
 
 
 class Signal(object):
@@ -14,12 +18,23 @@ class Signal(object):
         self.db = db
 
     def signal_handler(self, sig, frame):
-        
+
         self.db.connection.close()
         sys.exit(0)
 
 
-def change_current_user_password(term, db, config_path, login_name):
+SERVICE = 'key_database_manager'
+
+# setting up keyring (necessary for Windows and macOS)
+system = platform.system()
+if system == 'Darwin':
+    keyring.set_keyring(OS_X.Keyring())
+elif system == 'Windows':
+    keyring.set_keyring(Windows.WinVaultKeyring())
+else:
+    pass # rely on autodiscovery for Linux
+
+def change_current_user_password(term, db, login_name):
 
     tab = 8
 
@@ -40,13 +55,11 @@ def change_current_user_password(term, db, config_path, login_name):
     if text == text2 and len(text) >= 8:
 
         try:
+            # change database
             db.change_my_password(text)
-            config = configparser.ConfigParser()
-            config.read(config_path)
-            config.set(login_name, 'password', text)
 
-            with open(config_path, 'w') as configfile:
-                config.write(configfile)
+            # change keyring
+            keyring.set_password(SERVICE, login_name, text)
 
             y, x = wrapstr(term, 2, tab, "password changed!", curses.color_pair(2))
 
@@ -227,7 +240,7 @@ def connection_error_handler(term, e):
         else:
             sys.exit(0)
 
-def login(term, config_path):
+def login(term):
 
     # set vars
     tab = 8
@@ -257,10 +270,16 @@ def login(term, config_path):
     # confirm configuration
     while True:
 
-        # reading login config dict
-        login_config_dict = read_login_config(term, config_path)
+        # reading user storage
+        users = read_users_storage(term)
 
-        login_list = [l for l in login_config_dict.keys()]
+        # get passwords
+        login_list = list()
+        for u in users:
+            p = keyring.get_password(SERVICE, u)
+            u_p = u.replace('@', f':{p}@')
+            # each entry gets a tuple: user_name, URL object
+            login_list.append((u, urlparse(f'mysql://{u_p}')))
 
         # write on terminal
         term.clear()
@@ -277,16 +296,17 @@ def login(term, config_path):
         y = x = 0
         for login in login_list[line_start:line_start+max_lines]:
             if y == cursor:
-                loginswin.addstr(y, x, login, curses.color_pair(2))
+                loginswin.addstr(y, x, login[0], curses.color_pair(2))
             else:
-                loginswin.addstr(y, x, login)
+                loginswin.addstr(y, x, login[0])
             y += 1
 
         current_login = login_list[line_start:line_start+max_lines][cursor]
-        infowin.addstr(0, 0, 'user: {}'.format(login_config_dict[current_login]['user']))
-        infowin.addstr(1, 0, 'host: {}'.format(login_config_dict[current_login]['host']))
-        infowin.addstr(2, 0, 'password: {}'.format('•'*len(login_config_dict[current_login]['password'])))
-        infowin.addstr(3, 0, 'database: {}'.format(login_config_dict[current_login]['database']))
+        infowin.addstr(0, 0, f'user: {current_login[1].username}')
+        infowin.addstr(1, 0, f'host: {current_login[1].hostname}')
+        password_mask = '•'*len(current_login[1].password)
+        infowin.addstr(2, 0, f'password: {password_mask}')
+        infowin.addstr(3, 0, f'database: {current_login[1].path[1:]}')
 
         term.refresh()
         rectangle.refresh()
@@ -315,24 +335,24 @@ def login(term, config_path):
                     cursor -= 1
 
         elif key == ord('r'):
-            y, x = wrapstr(term, 29, tab, "are you sure you want to remove this login? (press 'y' for yes, any other key for no)", curses.color_pair(3))
+            y, x = wrapstr(term, 24, tab, "are you sure you want to remove this login? (press 'y' for yes, any other key for no)", curses.color_pair(3))
 
             confirm = term.getch()
 
             if confirm == ord('y'):
                 current_login = login_list[line_start:line_start+max_lines][cursor]
-                remove_login_config(config_path, login_name=current_login)
+                remove_login_credential(login_name=current_login[0])
                 cursor = 0
                 line_start = 0
 
         elif key == ord('c'):
             current_login = login_list[line_start:line_start+max_lines][cursor]
-            set_login_config(term, config_path, login_name=current_login)
+            set_login_credential(term, login_name=current_login[0])
             cursor = 0
             line_start = 0
 
         elif key == ord('n'):
-            set_login_config(term, config_path)
+            set_login_credential(term)
             cursor = 0
             line_start = 0
 
@@ -341,7 +361,7 @@ def login(term, config_path):
 
         else:
             current_login = login_list[line_start:line_start+max_lines][cursor]
-            return current_login, login_config_dict[current_login]
+            return current_login
 
 def main(term):
 
@@ -366,11 +386,8 @@ def main(term):
     CONFIRM = ord('\n')
     QUIT = ord('q')
 
-    # config path
-    config_path = os.path.join(os.path.dirname(sys.argv[0]), 'config', 'ta_key_data_manager.config')
-
     # get login vars
-    login_name, login_config = login(term, config_path)
+    current_login = login(term)
 
     # clear terminal
     term.clear()
@@ -379,7 +396,11 @@ def main(term):
     term.refresh() # force update screen
 
     try: # try to connect to the database (timeout = 10s)
-        db = ModelDataset(user=login_config['user'], host=login_config['host'], password=login_config['password'], db=login_config['database'])
+        db = ModelDataset(
+            user=current_login[1].username,
+            host=current_login[1].hostname, password=current_login[1].password,
+            db=current_login[1].path[1:]
+        )
 
         sig = Signal(db)
 
@@ -433,7 +454,7 @@ def main(term):
         key = term.getch()
 
         if key == CHANGE_PASSWORD:
-            change_current_user_password(term, db, config_path, login_name)
+            change_current_user_password(term, db, login_name)
 
         elif key == BULK_UPDATE:
             bulk_update_file = get_bulk_update_file(term, db)

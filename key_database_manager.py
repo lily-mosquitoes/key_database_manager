@@ -1,24 +1,39 @@
 import sys
 import os
-import configparser
+import platform
+from urllib.parse import urlparse
+
+import keyring
+from keyring.backends import OS_X, Windows
 from PyQt5 import QtWidgets
-from ui_files.login_window import Ui_Dialog as Ui_LoginWindow
-from ui_files.config_window import Ui_Dialog as Ui_ConfigWindow
-from ui_files.report_window import Ui_Dialog as Ui_ReportWindow
-from ui_files.main_window import Ui_MainWindow
-from models.model_dataset import ModelDataset
+
+from ui_files import Ui_LoginWindow, Ui_ConfigWindow, Ui_ReportWindow, Ui_MainWindow
+from models import ModelDataset
+
+
+SERVICE = 'key_database_manager'
+USERS_STORAGE = 'users_storage'
+
+# setting up keyring (necessary for Windows and macOS)
+system = platform.system()
+if system == 'Darwin':
+    keyring.set_keyring(OS_X.Keyring())
+elif system == 'Windows':
+    keyring.set_keyring(Windows.WinVaultKeyring())
+else:
+    pass # rely on autodiscovery for Linux
 
 
 class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
-    def __init__(self, config_path):
+
+    def __init__(self):
         super(LoginWindow, self).__init__()
         self.setupUi(self)
-        #
-        self.config_path = config_path
-        #
+
         self.UiComponents()
 
     def UiComponents(self):
+
         # tool button
         self.menu = QtWidgets.QMenu()
         self.actionAddLogin = QtWidgets.QAction('add login')
@@ -26,67 +41,113 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
         for item in [self.actionAddLogin, self.actionRemoveLogin]:
             self.menu.addAction(item)
         self.toolButton.setMenu(self.menu)
-        #
+
         self.showLogins()
-        #
+
         self.showLoginInfo()
-        #
+
         self.comboBox_loginAs.currentIndexChanged.connect(self.showLoginInfo)
-        #
+
         self.pushButton_login.setFocus()
-        #
+
         self.actionAddLogin.triggered.connect(self.addLogin)
         self.actionRemoveLogin.triggered.connect(self.removeLogin)
         self.pushButton_changeLoginInfo.pressed.connect(self.changeLoginInfo)
         self.pushButton_login.pressed.connect(self.db_connect)
 
     def db_connect(self):
+
         try:
-            self.db = ModelDataset(user=self.login_dict[self.current_login]['user'], host=self.login_dict[self.current_login]['host'], password=self.login_dict[self.current_login]['password'], db=self.login_dict[self.current_login]['database'])
+            self.db = ModelDataset(
+                user=self.login_list[self.current_login].username,
+                host=self.login_list[self.current_login].hostname, password=self.login_list[self.current_login].password,
+                db=self.login_list[self.current_login].path[1:]
+            )
         except Exception as e:
             connection_error_handler(e)
         self.hide()
 
-    def showLogins(self):
-        # read config file
+    def _return_users(self):
+
+        users_storage = keyring.get_password(SERVICE, USERS_STORAGE)
+        if users_storage:
+            users = users_storage.split('|')
+            return users
+        else:
+            raise Exception
+
+    def read_users_storage(self):
+
         try:
-            self.login_dict = self.read_login_config()
+            return self._return_users()
+
         except Exception:
-            config = ConfigWindow(config_path=self.config_path)
+            config = ConfigWindow()
             config.exec_()
-            self.login_dict = self.read_login_config()
-        #
-        self.comboBox_loginAs.addItems(self.login_dict.keys())
+            return self._return_users()
+
+    def read_login_list(self):
+        # reading user storage
+        try:
+            users = self.read_users_storage()
+        except Exception:
+            self.close()
+
+        # get passwords
+        self.login_list = dict()
+        for u in users:
+            p = keyring.get_password(SERVICE, u)
+            u_p = u.replace('@', f':{p}@')
+            # each entry is user_name, URL object
+            self.login_list[u] = urlparse(f'mysql://{u_p}')
+
+    def showLogins(self):
+        # reading login_list
+        self.read_login_list()
+
+        # show logins
+        self.comboBox_loginAs.addItems(self.login_list.keys())
         self.comboBox_loginAs.repaint() #repaint for MacOS
 
     def showLoginInfo(self):
-        #
+
         self.current_login = self.comboBox_loginAs.currentText()
-        #
-        if self.current_login != '':
-            self.label_info.setText('Current login info:\n\n    User: {}\n\n    Host: {}\n\n    Password: {}\n\n    Database: {}'.format(self.login_dict[self.current_login]['user'], self.login_dict[self.current_login]['host'], '•'*len(self.login_dict[self.current_login]['password']), self.login_dict[self.current_login]['database']))
-            self.label_info.repaint() #repaint for MacOS
-        else:
-            self.label_info.setText('')
-            self.label_info.repaint() #repaint for MacOS
+
+        user_text = self.login_list[self.current_login].username
+        host_text = self.login_list[self.current_login].hostname
+        password_mask = '•'*len(self.login_list[self.current_login].password)
+        database_text = self.login_list[self.current_login].path[1:]
+
+        self.label_info.setText(f'Current login info:\n\n    User: {user_text}\n\n    Host: {host_text}\n\n    Password: {password_mask}\n\n    Database: {database_text}')
+        self.label_info.repaint() #repaint for MacOS
 
     def addLogin(self):
-        config = ConfigWindow(config_path=self.config_path)
+
+        old_login_list = self.login_list.keys()
+
+        config = ConfigWindow()
         config.exec_()
-        old_login_dict = self.login_dict.keys()
-        self.login_dict = self.read_login_config()
-        item_to_add = set(self.login_dict.keys()) - set(old_login_dict)
+
+        self.read_login_list()
+
+        # show logins
+        item_to_add = set(self.login_list.keys()) - set(old_login_list)
         if len(item_to_add) > 0:
             self.comboBox_loginAs.addItem(item_to_add.pop())
             self.comboBox_loginAs.repaint()
             self.comboBox_loginAs.setCurrentIndex(self.comboBox_loginAs.count()-1)
 
     def changeLoginInfo(self):
-        config = ConfigWindow(config_path=self.config_path, change='login: {}'.format(self.current_login))
+
+        old_login_list = self.login_list.keys()
+
+        config = ConfigWindow(change=self.current_login)
         config.exec_()
-        old_login_dict = self.login_dict.keys()
-        self.login_dict = self.read_login_config()
-        item_to_add = set(self.login_dict.keys()) - set(old_login_dict)
+
+        self.read_login_list()
+
+        # show logins
+        item_to_add = set(self.login_list.keys()) - set(old_login_list)
         if len(item_to_add) > 0:
             self.comboBox_loginAs.removeItem(self.comboBox_loginAs.currentIndex())
             self.comboBox_loginAs.addItem(item_to_add.pop())
@@ -94,115 +155,88 @@ class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
             self.comboBox_loginAs.setCurrentIndex(self.comboBox_loginAs.count()-1)
 
     def removeLogin(self):
-        #
+
         login_to_remove = self.comboBox_loginAs.currentText()
+
         msg = QtWidgets.QMessageBox()
         msg.setIcon(QtWidgets.QMessageBox.Warning)
         msg.setText(f'Are you sure you want to delete the login "{login_to_remove}"?')
         msg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel)
         choice = msg.exec_()
-        #
+
         if choice == QtWidgets.QMessageBox.Yes:
-            config = configparser.ConfigParser()
-            config.read(self.config_path)
-            config.remove_section(f'login: {login_to_remove}')
-            with open(self.config_path, 'w') as configfile:
-                config.write(configfile)
-            #
-            self.login_dict = self.read_login_config()
+
+            users_storage = keyring.get_password(SERVICE, USERS_STORAGE)
+            users = users_storage.split('|')
+
+            # removing user from users_storage
+            users.remove(login_to_remove)
+            keyring.set_password(SERVICE, USERS_STORAGE, '|'.join(users))
+            # removing user from keyring
+            keyring.delete_password(SERVICE, login_to_remove)
+
+            self.read_login_list()
+
             self.comboBox_loginAs.removeItem(self.comboBox_loginAs.currentIndex())
             self.comboBox_loginAs.repaint()
-
-    def read_login_config(self):
-        config = configparser.ConfigParser()
-        try:
-            config.read(self.config_path)
-            sections = config.sections()
-            if sections == [] or [i for i in sections if 'login: ' in i] == []:
-                raise Exception
-            else:
-                pass
-            #
-            login_dict = dict()
-            for login in [i for i in sections if 'login: ' in i]:
-                # this seems useless but it will catch if a user accidentally deletes a line from the config file
-                l = {
-                    'user': config.get(login, 'user'),
-                    'host': config.get(login, 'host'),
-                    'password': config.get(login, 'password'),
-                    'database': config.get(login, 'database'),
-                }
-                login_dict[login[7:]] = l
-        except Exception:
-            raise Exception('config file not correctly set up')
-        #
-        return login_dict
 
     def closeEvent(self, event):
         sys.exit(0)
 
 
 class ConfigWindow(QtWidgets.QDialog, Ui_ConfigWindow):
-    def __init__(self, config_path, change=None):
+
+    def __init__(self, change=None):
         super(ConfigWindow, self).__init__()
         self.setupUi(self)
-        #
+
         # get input
         self.change = change
-        self.config_path = config_path
         self.pushButton_setLoginInfo.pressed.connect(self.write_config)
 
     def write_config(self):
-        #
-        config = configparser.ConfigParser()
-        #
-        if not os.path.exists(self.config_path):
-            pass
-        else:
-            config.read(self.config_path)
-        # delete previous entry if given
-        if self.change:
-            config.remove_section(self.change)
-        # set up config file
-        self.login_text = 'login: {}@{}:{}'.format(self.user.text(), self.host.text(), self.database.text())
-        try:
-            config.add_section(self.login_text)
-            config.set(self.login_text, 'User', self.user.text())
-            config.set(self.login_text, 'Host', self.host.text())
-            config.set(self.login_text, 'Password', self.password.text())
-            config.set(self.login_text, 'Database', self.database.text())
-            #
-            with open(self.config_path, 'w') as configfile:
-                config.write(configfile)
-        #
-        except configparser.DuplicateSectionError:
-            msg = QtWidgets.QMessageBox()
-            msg.setIcon(QtWidgets.QMessageBox.Warning)
-            msg.setText("Login already exists!")
-            msg.exec_()
-        #
-        self.hide()
 
-    def closeEvent(self, event):
-        if os.path.exists(self.config_path):
-            event.accept()
+        # accessing users_storage
+        users_storage = keyring.get_password(SERVICE, USERS_STORAGE)
+        if users_storage:
+            users = users_storage.split('|')
         else:
-            sys.exit(0)
+            users = list()
+
+        if self.change:
+            # removing user from users_storage
+            users.remove(self.change)
+            # removing user from keyring
+            keyring.delete_password(SERVICE, self.change)
+
+        login_name = f'{self.user.text()}@{self.host.text()}/{self.database.text()}'
+
+        # add user to users_storage
+        users.append(login_name)
+        keyring.set_password(SERVICE, USERS_STORAGE, '|'.join(users))
+
+        # add user to keyring
+        keyring.set_password(SERVICE, login_name, self.password.text())
+
+        self.hide()
 
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
+
     def __init__(self):
         super(MainWindow, self).__init__()
         self.setupUi(self)
-        #
+
         # login
-        self.config_path = os.path.join(os.path.dirname(sys.argv[0]), 'config', 'key_data_manager.config')
-        login = LoginWindow(self.config_path)
+        login = LoginWindow()
         login.exec_()
-        #
+
+        # current login
+        self.current_login = login.current_login
+
         # database connection
         self.db = login.db
-        #
+
         self.UiComponents()
 
     def closeEvent(self, event):
@@ -213,38 +247,43 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         event.accept()
 
     def UiComponents(self):
-        #
+
         # data query
         self.db_couplets = self.db.list_couplets()
         self.db_species = self.db.list_species()
-        #
+
         # ui setup
         self.comboBox_couplet.addItems(self.db_couplets)
         self.comboBox_species.addItems(self.db_species)
         self.comboBox_status.addItems(['0', '1', '01', 'NA'])
-        #
+
         self.onChoose()
-        #
+
+        # choose
         self.comboBox_couplet.currentIndexChanged.connect(self.onChoose)
         self.comboBox_species.currentIndexChanged.connect(self.onChoose)
-        #
+
+        # couplet next / previous
         self.pushButton_nextCouplet.pressed.connect(lambda: self.onCouplet(1))
         self.pushButton_previousCouplet.pressed.connect(lambda: self.onCouplet(-1))
-        #
+
+        # species next / previous
         self.pushButton_nextSpecies.pressed.connect(lambda: self.onSpecies(1))
         self.pushButton_previousSpecies.pressed.connect(lambda: self.onSpecies(-1))
-        #
-        ### MOST IMPORTANT BUTTON: UPDATE FUNCTION
+
+        # update
         self.pushButton_change.pressed.connect(self.onChange)
-        #
+
         # change password action
         self.action_change_my_password.triggered.connect(self.onChangeMyPassword)
-        #
+
         # bulk update action
         self.action_bulk_update.triggered.connect(self.onBulkUpdate)
 
     def get_new_password(self, message):
+
         text, okPressed = QtWidgets.QInputDialog.getText(self, message,"New password:", QtWidgets.QLineEdit.Password, "")
+
         if not okPressed:
             pass
         elif okPressed and len(text) >= 8:
@@ -256,14 +295,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             msg.exec_()
 
     def change_current_user_password(self, text):
+
         try:
             # change password for current user
             self.db.change_my_password(text)
-            config = configparser.ConfigParser()
-            config.read(self.config_path)
-            config.set('mosquito database', 'Password', text)
-            with open(self.config_path, 'w') as configfile:
-                config.write(configfile)
+            keyring.set_password(SERVICE, self.current_login, text)
         except Exception as e:
             connection_error_handler(e)
 
@@ -350,13 +386,13 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
     def __init__(self, path, db):
         super(ReportWindow, self).__init__()
         self.setupUi(self)
-        #
+
         # set no close
         self._want_to_close = False
-        #
+
         # database
         self.db = db
-        #
+
         # variables for report
         self.report = {
             'couplets_updated': set(),
@@ -367,7 +403,7 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
             'total_states_not_updated': 0,
         }
         self.couplets, self.species, self.states = self.import_bulk_update_file(path)
-        #
+
         self.update_list = list()
         for cp in self.couplets:
             for sp in self.species:
@@ -382,22 +418,21 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
                     },
                 }
                 self.update_list.append(d)
-        # self.update_list = iter(self.update_list)
-        #
+
         self.input_flag = False
         self.end_flag = False
         self.error_flag = False
-        #
+
         # input validation
         self.db_couplets = self.db.list_couplets()
         self.db_species = self.db.list_species()
-        #
+
         # display message
         self.message = ''
-        #
+
         while self.end_flag == False:
             self.mainLoop()
-        #
+
         # end
         self.label_report.setText(self.message)
         self.pushButton_ok.setEnabled(True)
@@ -415,61 +450,67 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
             evnt.ignore()
 
     def mainLoop(self):
-        #
+
         confirmed = self.get_current_pair()
         self.label_report.setText(self.message)
         self.onUpdate(confirmed)
 
     def import_bulk_update_file(self, path):
+
         file = open(path, 'rt').read().strip().split('\n')
+
         species = file.pop(0).split(',')[1:]
         couplets = list()
         states = list()
+
         for line in file:
             l = line.split(',')
             cp_name = l.pop(0)
             couplets.append(cp_name)
             states.append(l.copy())
+
         return couplets, species, states
 
     def get_current_pair(self):
+
         if len(self.update_list) > 0:
-            #
+
             self.update_pair = self.update_list.pop(0)
-            #
+
             if self.update_pair['couplet']['name'] not in self.db_couplets:
-                #
+
                 self.report['couplets_not_found'].add(self.update_pair['couplet']['name'])
-                #
+
                 self.message = "updating couplets... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets))
-                #
+
                 return None
-            #
+
             elif self.update_pair['species']['name'] not in self.db_species:
-                #
+
                 self.report['species_not_found'].add(self.update_pair['species']['name'])
-                #
+
                 self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
-                #
+
                 return None
+
             else:
                 # get state value on csv
                 self.update_value = self.states[self.update_pair['couplet']['index']][self.update_pair['species']['index']]
                 # get current state on database
                 db_value = self.db.show_state(species=self.update_pair['species']['name'], couplet=self.update_pair['couplet']['name'])
-                #
+
                 if self.update_value == db_value:
-                    #
+
                     self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
-                    #
+
                     return False # confirm update == False
-                #
+
                 elif db_value == None:
-                    #
+
                     self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
-                    #
+
                     return True # confirm update == True
-                #
+
                 elif self.update_value != db_value and db_value != None:
                     message = """
                         are you sure you want to change this value?
@@ -482,20 +523,20 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
 
                         press 'Yes' to confirm, or 'No' to skip
                     """.format(self.update_pair['couplet']['name'], self.update_pair['species']['name'], db_value, self.update_value)
-                    #
+
                     dlg = ConfirmUpdate(message)
                     result = dlg.exec_()
                     if result:
-                        #
+
                         self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
-                        #
+
                         return True # confirm update == True
                     else:
-                        #
+
                         self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
-                        #
+
                         return False # confirm update == False
-        #
+
         else:
             # print report
             self.message = 'Bulk update finished\n'
@@ -521,6 +562,7 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
         self.pushButton_ok.pressed.connect(lambda: connection_error_handler(e))
 
     def onUpdate(self, confirmed):
+
         if confirmed == True:
             try:
                 self.db.update(species=self.update_pair['species']['name'], value=self.update_value, couplet=self.update_pair['couplet']['name'])
@@ -529,8 +571,10 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
                 self.report['total_states_updated'] += 1
             except Exception as e:
                 self.display_error(e)
+
         elif confirmed == False:
             self.report['total_states_not_updated'] += 1
+
         elif confirmed == None:
             pass
 
