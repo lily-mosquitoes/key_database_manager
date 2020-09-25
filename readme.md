@@ -7,7 +7,7 @@ Key Database Manager is a tool developed to help build and maintain a database o
 
 There exists both a graphical application, made with Qt, and a terminal application, made using the python curses module. Both do the same thing: provide a user friendly environment to manually update the *key database*, which will be used by the Not a Key identification tool.
 
-The applications use PyMySQL to connect to the *key database*. All credentials given are stored in the system's keyring, using the [keyring module](https://github.com/jaraco/keyring/).
+The applications use PyMySQL to connect to a MySQL server's *key database*. All credentials given are stored in the system's keyring, using the [keyring module](https://github.com/jaraco/keyring/).
 
 Releases are built with PyInstaller.
 
