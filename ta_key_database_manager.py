@@ -2,7 +2,10 @@ import curses
 import signal
 import sys
 import os
+import platform
+
 import keyring
+from keyring.backends import OS_X, Windows
 from urllib.parse import urlparse
 
 from models.model_dataset import ModelDataset
@@ -21,6 +24,15 @@ class Signal(object):
 
 
 SERVICE = 'key_database_manager'
+
+# setting up keyring (necessary for Windows and macOS)
+system = platform.system()
+if system == 'Darwin':
+    keyring.set_keyring(OS_X.Keyring())
+elif system == 'Windows':
+    keyring.set_keyring(Windows.WinVaultKeyring())
+else:
+    pass # rely on autodiscovery for Linux
 
 def change_current_user_password(term, db, login_name):
 

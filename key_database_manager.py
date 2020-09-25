@@ -1,17 +1,28 @@
 import sys
 import os
+import platform
 from urllib.parse import urlparse
+
 import keyring
+from keyring.backends import OS_X, Windows
 from PyQt5 import QtWidgets
-from ui_files.login_window import Ui_Dialog as Ui_LoginWindow
-from ui_files.config_window import Ui_Dialog as Ui_ConfigWindow
-from ui_files.report_window import Ui_Dialog as Ui_ReportWindow
-from ui_files.main_window import Ui_MainWindow
-from models.model_dataset import ModelDataset
+
+from ui_files import Ui_LoginWindow, Ui_ConfigWindow, Ui_ReportWindow, Ui_MainWindow
+from models import ModelDataset
 
 
 SERVICE = 'key_database_manager'
 USERS_STORAGE = 'users_storage'
+
+# setting up keyring (necessary for Windows and macOS)
+system = platform.system()
+if system == 'Darwin':
+    keyring.set_keyring(OS_X.Keyring())
+elif system == 'Windows':
+    keyring.set_keyring(Windows.WinVaultKeyring())
+else:
+    pass # rely on autodiscovery for Linux
+
 
 class LoginWindow(QtWidgets.QDialog, Ui_LoginWindow):
 
