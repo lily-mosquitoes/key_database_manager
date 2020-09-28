@@ -158,6 +158,7 @@ def bulk_update(term, db, path):
                         y, x = wrapstr(term, y+2, tab, "AN ERROR OCCURED", curses.A_BOLD | curses.color_pair(3))
                         y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(3))
                         while True:
+                            curses.flushinp()
                             key = term.getch()
                             if key == curses.KEY_RESIZE:
                                 continue # this deals with resizing the terminal window
@@ -171,6 +172,7 @@ def bulk_update(term, db, path):
                         y, x = wrapstr(term, y+2, tab+4, "species: {}".format(sp))
                         y, x = wrapstr(term, y+2, tab+8, "from {} to {}".format(db_value, value))
                         y, x = wrapstr(term, y+2, tab, "press 'y' to confirm, or any key to skip")
+                        curses.flushinp()
                         key = term.getch()
                         if key == ord('y'):
                             try:
@@ -191,6 +193,7 @@ def bulk_update(term, db, path):
                                 y, x = wrapstr(term, y+2, tab, "AN ERROR OCCURED", curses.A_BOLD | curses.color_pair(3))
                                 y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(3))
                                 while True:
+                                    curses.flushinp()
                                     key = term.getch()
                                     if key == curses.KEY_RESIZE:
                                         continue # this deals with resizing the terminal window
@@ -212,6 +215,7 @@ def bulk_update(term, db, path):
             y, x = wrapstr(term, y+1, tab+4, "{}: {}".format(k, str(v)))
         y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(2))
         while True:
+            curses.flushinp()
             key = term.getch()
             if key == curses.KEY_RESIZE:
                 continue # this deals with resizing the terminal window
@@ -233,6 +237,7 @@ def connection_error_handler(term, e):
         y, x = wrapstr(term, y+2, tab, 'contact your database admin')
         y, x = wrapstr(term, y+1, tab, 'press any key to exit')
 
+        curses.flushinp()
         key = term.getch()
 
         if key == curses.KEY_RESIZE:
@@ -314,6 +319,7 @@ def login(term):
         rectangle_2.refresh()
         infowin.refresh()
 
+        curses.flushinp()
         key = term.getch()
 
         if key == curses.KEY_DOWN:
@@ -451,6 +457,7 @@ def main(term):
         y, x = wrapstr(term, y+1, tab, '({}) previous species  ({}) next species      ({}) quit'.format(readkey(PREV_S), readkey(NEXT_S), readkey(QUIT)), curses.A_DIM)
 
         # await user input
+        curses.flushinp()
         key = term.getch()
 
         if key == CHANGE_PASSWORD:
@@ -482,6 +489,7 @@ def main(term):
 
             curses.curs_set(1)
             curses.echo()
+            curses.flushinp()
             new_status = term.getstr(y, x+1).decode('utf-8').upper()
             curses.noecho()
             curses.curs_set(0)
@@ -496,6 +504,7 @@ def main(term):
                 y, x = wrapstr(term, y+1, tab, 'new status: {}'.format(new_status), curses.A_BOLD)
                 y, x = wrapstr(term, y+1, tab, "press '{}' to confirm, or any key to cancel".format(readkey(CONFIRM)))
 
+                curses.flushinp()
                 confirm = term.getch()
                 if confirm == CONFIRM:
                     try: # try to perform an update:
@@ -512,6 +521,7 @@ def main(term):
                 y, x = wrapstr(term, y+1, tab, 'illegal status: {}'.format(new_status), curses.color_pair(3))
                 y, x = wrapstr(term, y+1, tab, "please type '0', '1', '01' or 'NA'")
 
+            curses.flushinp()
             term.getch()
 
         elif key == QUIT:
