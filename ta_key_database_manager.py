@@ -116,8 +116,7 @@ def bulk_update(term, db, path):
             term.clear()
             y, x = wrapstr(term, 2, tab, "updating couplets... {}/{}".format(str(couplets.index(cp)), str(len(couplets))), curses.A_BOLD)
             # input validation
-            db_couplets = db.list_couplets()
-            if cp not in db_couplets:
+            if cp not in db.db_couplets:
                 report['couplets_not_found'].add(cp)
                 continue
             else:
@@ -128,8 +127,7 @@ def bulk_update(term, db, path):
                 y, x = wrapstr(term, 2, tab, "updating couplets... {}/{}".format(str(couplets.index(cp)), str(len(couplets))), curses.A_BOLD)
                 y, x = wrapstr(term, y+2, tab, "updating species... {}/{}".format(str(species.index(sp)), str(len(species))), curses.A_BOLD)
                 # input validation
-                db_species = db.list_species()
-                if sp not in db_species:
+                if sp not in db.db_species:
                     report['species_not_found'].add(sp)
                     continue
                 else:
@@ -416,10 +414,6 @@ def main(term):
     except Exception as e:
         connection_error_handler(term, e)
 
-    # read db couplets and species
-    db_couplets = db.list_couplets()
-    db_species = db.list_species()
-
     # set internal variables
     sp_index = 0
     cp_index = 0
@@ -431,9 +425,9 @@ def main(term):
 
         # read db info for current index
         try: # try to query the data
-            couplet = db_couplets[cp_index]
+            couplet = db.db_couplets[cp_index]
             zero_text, one_text = db.show_couplet(couplet)
-            species = db_species[sp_index]
+            species = db.db_species[sp_index]
             status = db.show_state(species, couplet)
         except Exception as e:
             connection_error_handler(term, e)
@@ -469,7 +463,7 @@ def main(term):
                 bulk_update(term, db, bulk_update_file)
 
         elif key == NEXT_C:
-            if cp_index < len(db_couplets)-1:
+            if cp_index < len(db.db_couplets)-1:
                 cp_index += 1
 
         elif key == PREV_C:
@@ -477,7 +471,7 @@ def main(term):
                 cp_index -= 1
 
         elif key == NEXT_S:
-            if sp_index < len(db_species)-1:
+            if sp_index < len(db.db_species)-1:
                 sp_index += 1
 
         elif key == PREV_S:

@@ -248,13 +248,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     def UiComponents(self):
 
-        # data query
-        self.db_couplets = self.db.list_couplets()
-        self.db_species = self.db.list_species()
-
         # ui setup
-        self.comboBox_couplet.addItems(self.db_couplets)
-        self.comboBox_species.addItems(self.db_species)
+        self.comboBox_couplet.addItems(self.db.db_couplets)
+        self.comboBox_species.addItems(self.db.db_species)
         self.comboBox_status.addItems(['0', '1', '01', 'NA'])
 
         self.onChoose()
@@ -325,9 +321,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.label_status.repaint() #repaint for MacOS
 
     def onCouplet(self, add):
-        c_couplet_index = self.db_couplets.index(self.c_couplet)
+        c_couplet_index = self.db.db_couplets.index(self.c_couplet)
         n_couplet_index = c_couplet_index + add
-        if n_couplet_index >= len(self.db_couplets) or n_couplet_index < 0:
+        if n_couplet_index >= len(self.db.db_couplets) or n_couplet_index < 0:
             pass # avoid index out of range
         else:
             self.comboBox_couplet.setCurrentIndex(n_couplet_index)
@@ -335,9 +331,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.onChoose()
 
     def onSpecies(self, add):
-        c_species_index = self.db_species.index(self.c_species)
+        c_species_index = self.db.db_species.index(self.c_species)
         n_species_index = c_species_index + add
-        if n_species_index >= len(self.db_species) or n_species_index < 0:
+        if n_species_index >= len(self.db.db_species) or n_species_index < 0:
             pass # avoid index out of range
         else:
             self.comboBox_species.setCurrentIndex(n_species_index)
@@ -423,10 +419,6 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
         self.end_flag = False
         self.error_flag = False
 
-        # input validation
-        self.db_couplets = self.db.list_couplets()
-        self.db_species = self.db.list_species()
-
         # display message
         self.message = ''
 
@@ -477,7 +469,7 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
 
             self.update_pair = self.update_list.pop(0)
 
-            if self.update_pair['couplet']['name'] not in self.db_couplets:
+            if self.update_pair['couplet']['name'] not in self.db.db_couplets:
 
                 self.report['couplets_not_found'].add(self.update_pair['couplet']['name'])
 
@@ -485,7 +477,7 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
 
                 return None
 
-            elif self.update_pair['species']['name'] not in self.db_species:
+            elif self.update_pair['species']['name'] not in self.db.db_species:
 
                 self.report['species_not_found'].add(self.update_pair['species']['name'])
 

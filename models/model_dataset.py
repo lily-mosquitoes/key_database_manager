@@ -7,27 +7,37 @@ class ModelDataset(object):
         self._connection = pymysql.connect(**kwargs)
         self.cursor = self._connection.cursor()
 
+        # cache species names
+        self.db_species = self._list_species()
+
+        # cache couplet info
+        cp_info = self._get_couplet_info()
+        self.db_couplets = list()
+        self._cp_cache = dict()
+        for couplet, z, o in cp_info:
+            self.db_couplets.append(couplet)
+            self._cp_cache[couplet] = (z, o)
+
     @property
     def connection(self):
         return self._connection
 
-    def _show_couplet_text(self, text, couplet):
+    def _get_couplet_info(self):
         sql = """
-            SELECT {} FROM couplet_data WHERE couplet_data.couplet = '{}';
-        """.format(text, couplet)
+            SELECT couplet, zero_text, one_text FROM couplet_data;
+        """
         try:
             self.cursor.execute(sql)
-            text = self.cursor.fetchone()[0]
+            info = self.cursor.fetchall()
         except pymysql.Error as e:
             raise e
-        return text
+        return info
 
     def show_couplet(self, couplet):
-        zero_text = self._show_couplet_text('zero_text', couplet)
-        one_text = self._show_couplet_text('one_text', couplet)
+        zero_text, one_text = self._cp_cache[couplet]
         return zero_text, one_text
 
-    def list_species(self):
+    def _list_species(self):
         sql = """
             SHOW COLUMNS FROM species_states;
         """
@@ -54,9 +64,7 @@ class ModelDataset(object):
 
     def show_state(self, species, couplet):
         # input validation
-        db_species = self.list_species()
-        db_couplets = self.list_couplets()
-        if species in db_species and couplet in db_couplets:
+        if species in self.db_species and couplet in self.db_couplets:
             pass
         else:
             raise pymysql.IntegrityError
