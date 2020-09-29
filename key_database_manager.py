@@ -9,6 +9,7 @@ from PyQt5 import QtWidgets
 
 from ui_files import Ui_LoginWindow, Ui_ConfigWindow, Ui_ReportWindow, Ui_MainWindow
 from models import ModelDataset
+from common_functions import import_bulk_update_file
 
 
 SERVICE = 'key_database_manager'
@@ -393,12 +394,10 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
         self.report = {
             'couplets_updated': set(),
             'species_updated': set(),
-            'couplets_not_found': set(),
-            'species_not_found': set(),
             'total_states_updated': 0,
             'total_states_not_updated': 0,
         }
-        self.couplets, self.species, self.states = self.import_bulk_update_file(path)
+        self.couplets, self.species, self.states = import_bulk_update_file(path, self.db.db_couplets, self.db.db_species)
 
         self.update_list = list()
         for cp in self.couplets:
@@ -422,6 +421,9 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
         # display message
         self.message = ''
 
+        self.begin()
+
+    def begin(self):
         while self.end_flag == False:
             self.mainLoop()
 
@@ -445,23 +447,8 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
 
         confirmed = self.get_current_pair()
         self.label_report.setText(self.message)
+        self.label_report.repaint()
         self.onUpdate(confirmed)
-
-    def import_bulk_update_file(self, path):
-
-        file = open(path, 'rt').read().strip().split('\n')
-
-        species = file.pop(0).split(',')[1:]
-        couplets = list()
-        states = list()
-
-        for line in file:
-            l = line.split(',')
-            cp_name = l.pop(0)
-            couplets.append(cp_name)
-            states.append(l.copy())
-
-        return couplets, species, states
 
     def get_current_pair(self):
 
@@ -469,65 +456,44 @@ class ReportWindow(QtWidgets.QDialog, Ui_ReportWindow):
 
             self.update_pair = self.update_list.pop(0)
 
-            if self.update_pair['couplet']['name'] not in self.db.db_couplets:
+            # get state value on csv
+            self.update_value = self.states[self.update_pair['couplet']['index']][self.update_pair['species']['index']]
 
-                self.report['couplets_not_found'].add(self.update_pair['couplet']['name'])
+            # get current state on database
+            db_value = self.db.show_state(species=self.update_pair['species']['name'], couplet=self.update_pair['couplet']['name'])
 
-                self.message = "updating couplets... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets))
+            # message
+            self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index']+1, len(self.couplets), self.update_pair['species']['index']+1, len(self.species))
 
-                return None
+            if self.update_value == db_value:
 
-            elif self.update_pair['species']['name'] not in self.db.db_species:
+                return False # confirm update == False
 
-                self.report['species_not_found'].add(self.update_pair['species']['name'])
+            elif db_value == None:
 
-                self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
+                return True # confirm update == True
 
-                return None
+            elif self.update_value != db_value and db_value != None:
 
-            else:
-                # get state value on csv
-                self.update_value = self.states[self.update_pair['couplet']['index']][self.update_pair['species']['index']]
-                # get current state on database
-                db_value = self.db.show_state(species=self.update_pair['species']['name'], couplet=self.update_pair['couplet']['name'])
+                message = """
+                    are you sure you want to change this value?
 
-                if self.update_value == db_value:
+                        couplet: {}
 
-                    self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
+                        species: {}
 
-                    return False # confirm update == False
+                        from {} to {}
 
-                elif db_value == None:
+                    press 'Yes' to confirm, or 'No' to skip
+                """.format(self.update_pair['couplet']['name'], self.update_pair['species']['name'], db_value, self.update_value)
 
-                    self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
-
+                dlg = ConfirmUpdate(self.message+'\n\n'+message)
+                result = dlg.exec_()
+                if result:
                     return True # confirm update == True
 
-                elif self.update_value != db_value and db_value != None:
-                    message = """
-                        are you sure you want to change this value?
-
-                            couplet: {}
-
-                            species: {}
-
-                            from {} to {}
-
-                        press 'Yes' to confirm, or 'No' to skip
-                    """.format(self.update_pair['couplet']['name'], self.update_pair['species']['name'], db_value, self.update_value)
-
-                    dlg = ConfirmUpdate(message)
-                    result = dlg.exec_()
-                    if result:
-
-                        self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
-
-                        return True # confirm update == True
-                    else:
-
-                        self.message = "updating couplets... {}/{}\nupdating species... {}/{}".format(self.update_pair['couplet']['index'], len(self.couplets), self.update_pair['species']['index'], len(self.species))
-
-                        return False # confirm update == False
+                else:
+                    return False # confirm update == False
 
         else:
             # print report

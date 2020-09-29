@@ -9,6 +9,7 @@ from keyring.backends import OS_X, Windows
 from urllib.parse import urlparse
 
 from models.model_dataset import ModelDataset
+from common_functions import import_bulk_update_file
 from ta_functions import wrapstr, get_text, readkey, get_file, set_login_credential, read_users_storage, remove_login_credential
 
 
@@ -84,55 +85,44 @@ def get_bulk_update_file(term, db):
 
     return choosen_file
 
-def import_bulk_update_file(path):
-    file = open(path, 'rt').read().strip().split('\n')
-    species = file.pop(0).split(',')[1:]
-    couplets = list()
-    states = list()
-    for line in file:
-        l = line.split(',')
-        cp_name = l.pop(0)
-        couplets.append(cp_name)
-        states.append(l.copy())
-    return couplets, species, states
-
 def bulk_update(term, db, path):
+
     # variables for report
     report = {
         'couplets_updated': set(),
         'species_updated': set(),
-        'couplets_not_found': set(),
-        'species_not_found': set(),
         'total_states_updated': 0,
         'total_states_not_updated': 0,
     }
-    #
+
     tab = 8
     while True:
         term.clear()
-        couplets, species, states = import_bulk_update_file(path)
+        term.refresh()
+        try:
+            # the orientation of the "states" assumes the matrix
+            # is lines=couplets, cols=species
+            couplets, species, states = import_bulk_update_file(path=path, couplets=db.db_couplets, species=db.db_species)
+        except Exception as e:
+            connection_error_handler(term, e)
+
         for cp in couplets:
+
             # progress message
             term.clear()
-            y, x = wrapstr(term, 2, tab, "updating couplets... {}/{}".format(str(couplets.index(cp)), str(len(couplets))), curses.A_BOLD)
-            # input validation
-            if cp not in db.db_couplets:
-                report['couplets_not_found'].add(cp)
-                continue
-            else:
-                pass
+            y, x = wrapstr(term, 2, tab, "updating couplets... {}/{}".format(str(couplets.index(cp)+1), str(len(couplets))), curses.A_BOLD)
+            term.refresh()
+
             for sp in species:
+
                 # progress message
                 term.clear()
-                y, x = wrapstr(term, 2, tab, "updating couplets... {}/{}".format(str(couplets.index(cp)), str(len(couplets))), curses.A_BOLD)
-                y, x = wrapstr(term, y+2, tab, "updating species... {}/{}".format(str(species.index(sp)), str(len(species))), curses.A_BOLD)
-                # input validation
-                if sp not in db.db_species:
-                    report['species_not_found'].add(sp)
-                    continue
-                else:
-                    pass
+                y, x = wrapstr(term, 2, tab, "updating couplets... {}/{}".format(str(couplets.index(cp)+1), str(len(couplets))), curses.A_BOLD)
+                y, x = wrapstr(term, y+2, tab, "updating species... {}/{}".format(str(species.index(sp)+1), str(len(species))), curses.A_BOLD)
+                term.refresh()
+
                 # since couplet and species names are unique
+                # and lines=couplets, cols=species
                 value = states[couplets.index(cp)][species.index(sp)]
                 # get current state on database
                 db_value = db.show_state(species=sp, couplet=cp)
@@ -155,6 +145,7 @@ def bulk_update(term, db, path):
                             y, x = wrapstr(term, y+2, tab+4, "{}: {}".format(k, srt(v)))
                         y, x = wrapstr(term, y+2, tab, "AN ERROR OCCURED", curses.A_BOLD | curses.color_pair(3))
                         y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(3))
+                        term.refresh()
                         while True:
                             curses.flushinp()
                             key = term.getch()
@@ -170,6 +161,7 @@ def bulk_update(term, db, path):
                         y, x = wrapstr(term, y+2, tab+4, "species: {}".format(sp))
                         y, x = wrapstr(term, y+2, tab+8, "from {} to {}".format(db_value, value))
                         y, x = wrapstr(term, y+2, tab, "press 'y' to confirm, or any key to skip")
+                        term.refresh()
                         curses.flushinp()
                         key = term.getch()
                         if key == ord('y'):
@@ -190,6 +182,7 @@ def bulk_update(term, db, path):
                                     y, x = wrapstr(term, y+2, tab+4, "{}: {}".format(k, srt(v)))
                                 y, x = wrapstr(term, y+2, tab, "AN ERROR OCCURED", curses.A_BOLD | curses.color_pair(3))
                                 y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(3))
+                                term.refresh()
                                 while True:
                                     curses.flushinp()
                                     key = term.getch()
@@ -212,6 +205,7 @@ def bulk_update(term, db, path):
                 v = len(v)
             y, x = wrapstr(term, y+1, tab+4, "{}: {}".format(k, str(v)))
         y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(2))
+        term.refresh()
         while True:
             curses.flushinp()
             key = term.getch()
