@@ -563,7 +563,7 @@ class ConfirmUpdate(QtWidgets.QDialog):
 def connection_error_handler(e):
     error_dialog = QtWidgets.QMessageBox()
     error_dialog.setIcon(QtWidgets.QMessageBox.Critical)
-    error_dialog.setText('connection failed with following error:\n\nerr code: {}\nerr msg.: {}\n\ncontact your database admin'.format(e.args[0], e.args[1]))
+    error_dialog.setText('the following error occured:\n\nerr code: {}\nerr msg.: {}\n\nif you feel this is a mistake, contact your database admin'.format(e.args[0], e.args[1]))
     sys.exit(error_dialog.exec_())
 
 def main():

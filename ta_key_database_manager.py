@@ -223,10 +223,10 @@ def connection_error_handler(term, e):
 
         term.clear()
 
-        y, x = wrapstr(term, 2, tab, 'connection failed with following error:', curses.A_BOLD)
+        y, x = wrapstr(term, 2, tab, 'the following error occured:', curses.A_BOLD)
         y, x = wrapstr(term, y+2, tab, 'err code: {}'.format(e.args[0]), curses.color_pair(3))
         y, x = wrapstr(term, y+1, tab, 'err msg.: {}'.format(e.args[1]), curses.color_pair(3))
-        y, x = wrapstr(term, y+2, tab, 'contact your database admin')
+        y, x = wrapstr(term, y+2, tab, 'if you feel this is a mistake, contact your database admin')
         y, x = wrapstr(term, y+1, tab, 'press any key to exit')
 
         curses.flushinp()
