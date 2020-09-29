@@ -23,12 +23,20 @@ You must provide login credentials to access the database of character states yo
 
 **Password change:** in the 'actions' menu, you may change your database access password, this will affect the database user credentials directly and it will subsequently update your configuration files. New passwords must be at least 8 characters long; you will be prompted to type your new password twice to avoid typing errors.
 
-**Bulk updates:** in the 'actions' menu, you can perform bulk updates of characters using a `.csv` file. The provided `.csv` file must be in the following configuration:
+**Bulk updates:** in the 'actions' menu, you can perform bulk updates of characters using a `.csv` file. The provided `.csv` file must be in one the following configurations:
 
+a)
 |  | Unique Species Name A | Unique Species Name B | Unique Species Name C |
 |-|-|-|-|
 | Unique Couplet Name 1 | 0 | 1 | 01 |
 | Unique Couplet Name 2 | 10 | NA | NULL |
+
+b)
+|  | Unique Couplet Name 1 | Unique Couplet Name 2 |
+|-|-|-|
+| Unique Species Name A | 0 | 10 |
+| Unique Species Name B | 1 | NA |
+| Unique Species Name C | 01 | NULL |
 
 **Accepted values are: 0, 1, 01, 10, NA and NULL**
 
