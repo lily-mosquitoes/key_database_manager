@@ -4,6 +4,8 @@ import sys
 import os
 import platform
 
+import pymysql
+
 import keyring
 from keyring.backends import OS_X, Windows
 from urllib.parse import urlparse
@@ -142,7 +144,7 @@ def bulk_update(term, db, path):
                         for k, v in report.items():
                             if type(v) == set:
                                 v = len(v)
-                            y, x = wrapstr(term, y+2, tab+4, "{}: {}".format(k, srt(v)))
+                            y, x = wrapstr(term, y+2, tab+4, "{}: {}".format(k, str(v)))
                         y, x = wrapstr(term, y+2, tab, "AN ERROR OCCURED", curses.A_BOLD | curses.color_pair(3))
                         y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(3))
                         term.refresh()
@@ -179,7 +181,7 @@ def bulk_update(term, db, path):
                                 for k, v in report.items():
                                     if type(v) == set :
                                         v = len(v)
-                                    y, x = wrapstr(term, y+2, tab+4, "{}: {}".format(k, srt(v)))
+                                    y, x = wrapstr(term, y+2, tab+4, "{}: {}".format(k, str(v)))
                                 y, x = wrapstr(term, y+2, tab, "AN ERROR OCCURED", curses.A_BOLD | curses.color_pair(3))
                                 y, x = wrapstr(term, y+2, tab, "press any key to exit", curses.color_pair(3))
                                 term.refresh()
