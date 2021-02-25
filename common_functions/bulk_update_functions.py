@@ -43,5 +43,5 @@ def import_bulk_update_file(path, couplets, species):
     for l in file:
         cp_name = l.pop(0)
         couplets.append(cp_name)
-        states.append(l.copy())
+        states.append([s if s != '' else None for s in l])
     return couplets, species, states
